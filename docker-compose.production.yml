@@ -29,7 +29,8 @@ services:
     ports:
       - "${PORT:-3000}:3000"
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-shopsyncx}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-shopsyncx}?schema=public
+      # DB_HOST must be "postgres" (service name) when using this compose file
+      DATABASE_URL: postgresql://${POSTGRES_USER:-shopsyncx}:${POSTGRES_PASSWORD}@${DB_HOST:-postgres}:${DB_PORT:-5432}/${POSTGRES_DB:-shopsyncx}?schema=public
       JWT_SECRET: ${JWT_SECRET}
       NODE_ENV: production
       PORT: 3000

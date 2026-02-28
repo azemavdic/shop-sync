@@ -43,6 +43,8 @@ JWT_SECRET=your_jwt_secret_at_least_16_chars
 POSTGRES_USER=shopsyncx
 POSTGRES_DB=shopsyncx
 PORT=3000
+# DB_HOST=postgres   # default; only set if using Coolify's separate Postgres
+# DB_PORT=5432      # default
 
 # OAuth (optional)
 GOOGLE_CLIENT_ID=
@@ -140,6 +142,13 @@ eas build --platform android --profile production
 ## Troubleshooting
 
 **Backend won't start:** Check `docker compose logs backend`. Often a missing `POSTGRES_PASSWORD` or `JWT_SECRET`.
+
+**`Can't reach database server at shopsyncx:8` (or wrong host):** The `DATABASE_URL` is malformed. When using this compose file, the DB host must be `postgres` (the service name) and port `5432`. In Coolify:
+- Do **not** override `DATABASE_URL` in the UI if postgres is in the same compose file
+- Ensure `POSTGRES_PASSWORD` is set (required)
+- If postgres is a separate Coolify resource: enable "Connect to Predefined Network" on the Service Stack, then set `DB_HOST` to the host from Coolify's Postgres "Internal URL" (e.g. `postgres-abc123`)
+
+**Password with special characters:** If `POSTGRES_PASSWORD` contains `@`, `:`, or `#`, URL-encode it (e.g. `@` → `%40`, `:` → `%3A`).
 
 **App can't connect:** Ensure your phone can reach the server (same network or server has public IP). If using HTTPS, the certificate must be valid.
 
