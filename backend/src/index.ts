@@ -1,13 +1,18 @@
+import 'dotenv/config';
 import { config } from 'dotenv';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname, resolve } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-config({ path: join(__dirname, '../../.env') });
+// Also try backend/.env and project root (dotenv/config loads cwd/.env first)
+config({ path: resolve(__dirname, '../.env') });
+config({ path: resolve(__dirname, '../../.env') });
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
+import fastifySocketIo from 'fastify-socket.io';
 import { loadEnv } from './config/env.js';
+import { setIO, setupSocketHandlers } from './socket/index.js';
 
 const env = loadEnv();
 
@@ -16,6 +21,9 @@ const fastify = Fastify({ logger: true });
 async function bootstrap() {
   await fastify.register(cors, { origin: true });
   await fastify.register(jwt, { secret: env.JWT_SECRET });
+  await fastify.register(fastifySocketIo as any);
+  setIO((fastify as any).io);
+  setupSocketHandlers((fastify as any).io);
 
   fastify.decorate('authenticate', async function (request: any, reply: any) {
     try {

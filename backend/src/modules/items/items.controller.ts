@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import * as itemsService from './items.service.js';
 import { addItemSchema, updateItemSchema } from './items.schemas.js';
+import * as socket from '../../socket/index.js';
 
 export const itemsController = {
   async list(req: FastifyRequest, reply: FastifyReply) {
@@ -28,6 +29,7 @@ export const itemsController = {
         groupId,
         parsed.data
       );
+      socket.emitItemAdded(groupId, item);
       return reply.status(201).send(item);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed';
@@ -54,6 +56,7 @@ export const itemsController = {
         itemId,
         data
       );
+      socket.emitItemEdited(groupId, item);
       return reply.send(item);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed';
@@ -66,6 +69,7 @@ export const itemsController = {
     const { groupId, itemId } = req.params as { groupId: string; itemId: string };
     try {
       await itemsService.deleteItem(payload.userId, groupId, itemId);
+      socket.emitItemDeleted(groupId, itemId);
       return reply.send({ message: 'Item deleted successfully' });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed';

@@ -22,8 +22,17 @@ interface ListState {
 
 export const useListStore = create<ListState>((set, get) => ({
   items: [],
-  setItems: (items) => set({ items }),
-  addItem: (item) => set((state) => ({ items: [...state.items, item] })),
+  setItems: (items) =>
+    set({
+      items: items.filter(
+        (item, i, arr) => arr.findIndex((x) => x.id === item.id) === i
+      ),
+    }),
+  addItem: (item) =>
+    set((state) => {
+      if (state.items.some((i) => i.id === item.id)) return state;
+      return { items: [...state.items, item] };
+    }),
   updateItem: (id, updates) =>
     set((state) => ({
       items: state.items.map((i) => (i.id === id ? { ...i, ...updates } : i)),

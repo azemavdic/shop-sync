@@ -13,8 +13,8 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://YOUR_SERVER/api/v1",
-        "EXPO_PUBLIC_SOCKET_URL": "https://YOUR_SERVER"
+        "EXPO_PUBLIC_API_URL": "https://shopapi.cehaje.net/api/v1",
+        "EXPO_PUBLIC_SOCKET_URL": "https://shopapi.cehaje.net"
       }
     },
     "production": {
@@ -22,8 +22,8 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://YOUR_SERVER/api/v1",
-        "EXPO_PUBLIC_SOCKET_URL": "https://YOUR_SERVER"
+        "EXPO_PUBLIC_API_URL": "https://shopapi.cehaje.net/api/v1",
+        "EXPO_PUBLIC_SOCKET_URL": "https://shopapi.cehaje.net"
       }
     }
   },

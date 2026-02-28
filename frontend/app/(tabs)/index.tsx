@@ -8,6 +8,7 @@ import {
   Modal,
   Alert,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -50,6 +51,7 @@ export default function ChannelsScreen() {
   const [inviteModal, setInviteModal] = useState<{ id: string; name: string } | null>(null);
   const [members, setMembers] = useState<ChannelMember[]>([]);
   const [inviteEmailOrUsername, setInviteEmailOrUsername] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   async function fetchChannels(silent = false) {
     if (!token) return;
@@ -278,6 +280,17 @@ export default function ChannelsScreen() {
           data={channels}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={async () => {
+                setRefreshing(true);
+                await fetchChannels(true);
+                setRefreshing(false);
+              }}
+              tintColor="#60a5fa"
+            />
+          }
           renderItem={({ item }) => {
             const isCreator = user?.id && item.createdById === user.id;
             return (

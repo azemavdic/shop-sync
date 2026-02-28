@@ -1,9 +1,11 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from '../../i18n';
+import { useSocketConnection } from '../../hooks/useSocket';
 
 export default function TabsLayout() {
   const { t } = useTranslation();
+  useSocketConnection();
   return (
     <Tabs
       screenOptions={{

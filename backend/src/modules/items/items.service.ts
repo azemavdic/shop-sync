@@ -1,20 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import * as repo from './items.repository.js';
-
-const prisma = new PrismaClient();
-
-// Channel members have automatic access to all groups in that channel
-async function canAccessGroup(userId: string, groupId: string): Promise<boolean> {
-  const group = await prisma.group.findUnique({
-    where: { id: groupId },
-    select: { channelId: true },
-  });
-  if (!group) return false;
-  const m = await prisma.channelMember.findUnique({
-    where: { userId_channelId: { userId, channelId: group.channelId } },
-  });
-  return !!m;
-}
+import { canAccessGroup } from '../../utils/can-access-group.js';
 
 export async function getItems(userId: string, groupId: string) {
   if (!(await canAccessGroup(userId, groupId))) throw new Error('Not a channel member');

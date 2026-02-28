@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Modal,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,6 +38,7 @@ export default function GroupsTabScreen() {
   const [editName, setEditName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   const channelId = currentChannel?.id;
 
@@ -46,19 +48,19 @@ export default function GroupsTabScreen() {
     }
   }, [channels, currentChannel]);
 
-  async function fetchGroups() {
+  async function fetchGroups(silent = false) {
     if (!channelId) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const data = await groupsService.getGroups(channelId);
       setGroups(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('failed'));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
@@ -197,6 +199,17 @@ export default function GroupsTabScreen() {
         </View>
       ) : (
         <FlatList
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={async () => {
+                setRefreshing(true);
+                await fetchGroups(true);
+                setRefreshing(false);
+              }}
+              tintColor="#60a5fa"
+            />
+          }
           data={[...groups].sort((a, b) => {
             const aDone = (a.itemCount ?? 0) > 0 && (a.checkedItemCount ?? 0) >= (a.itemCount ?? 0);
             const bDone = (b.itemCount ?? 0) > 0 && (b.checkedItemCount ?? 0) >= (b.itemCount ?? 0);

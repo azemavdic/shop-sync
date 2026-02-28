@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,31 +19,42 @@ import { useGroupStore } from '../../stores/groupStore';
 import { useListStore, ListItem } from '../../stores/listStore';
 import * as itemsService from '../../services/items.service';
 import { useTranslation } from '../../i18n';
+import { useListSocket } from '../../hooks/useSocket';
 
 export default function ListScreen() {
   const { t, tWithParams } = useTranslation();
   const { user } = useAuthStore();
-  const { currentGroup } = useGroupStore();
+  const { currentGroup, updateGroup } = useGroupStore();
   const { items, setItems, addItem, updateItem, removeItem, getOrderedItems } =
     useListStore();
+  useListSocket(currentGroup?.id);
+
+  // Sync group item counts when list changes (for green/red line and X/Y display)
+  useEffect(() => {
+    if (!currentGroup) return;
+    const itemCount = items.length;
+    const checkedItemCount = items.filter((i) => i.checked).length;
+    updateGroup(currentGroup.id, { itemCount, checkedItemCount });
+  }, [items, currentGroup?.id]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemQty, setNewItemQty] = useState('');
   const [adding, setAdding] = useState(false);
 
-  async function fetchItems() {
+  async function fetchItems(silent = false) {
     if (!currentGroup) {
       setItems([]);
       return;
     }
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const data = await itemsService.getItems(currentGroup.id);
       setItems(data);
     } catch (err) {
       Alert.alert(t('error'), err instanceof Error ? err.message : t('failed'));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
@@ -172,6 +184,17 @@ export default function ListScreen() {
           data={orderedItems}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={async () => {
+                setRefreshing(true);
+                await fetchItems(true);
+                setRefreshing(false);
+              }}
+              tintColor="#60a5fa"
+            />
+          }
           renderItem={({ item }) => (
             <View style={[styles.item, item.checked && styles.itemChecked]}>
               <TouchableOpacity
