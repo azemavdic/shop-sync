@@ -12,9 +12,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#1a1a2e"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.shopsyncx.app"
@@ -30,7 +28,24 @@
       "expo-router",
       "expo-secure-store",
       "expo-asset",
-      "expo-web-browser"
-    ]
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      "expo-font"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "80498b21-cabe-405c-b80f-8b5ffc086986"
+      }
+    }
   }
 }
