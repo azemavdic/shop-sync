@@ -1,0 +1,116 @@
+// ShopSyncX - Database Schema
+// Prisma ORM for PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../backend/node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// User & Authentication
+// =============================================================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique // for invites and display
+  password  String   // bcrypt hashed
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdChannels    Channel[]
+  channelMemberships ChannelMember[]
+  groupMemberships   GroupMember[]
+  addedItems         Item[]         @relation("AddedByUser")
+}
+
+// =============================================================================
+// Channels & Channel Members (invite users to channels)
+// =============================================================================
+
+model Channel {
+  id          String   @id @default(cuid())
+  name        String
+  inviteCode  String   @unique // e.g. "CHN123" - 6 char alphanumeric
+  createdById String   // only creator can update/delete
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy User            @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  members   ChannelMember[]
+  groups    Group[]
+}
+
+model ChannelMember {
+  id        String   @id @default(cuid())
+  userId    String
+  channelId String
+  role      String   @default("member") // member | admin
+  joinedAt  DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, channelId])
+  @@index([userId])
+  @@index([channelId])
+}
+
+// =============================================================================
+// Groups & Memberships (within a channel)
+// =============================================================================
+
+model Group {
+  id        String   @id @default(cuid())
+  name      String
+  channelId String
+  inviteCode String  @unique // for joining group within/outside channel
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  channel Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  members GroupMember[]
+  items   Item[]
+}
+
+model GroupMember {
+  id        String   @id @default(cuid())
+  userId    String
+  groupId   String
+  role      String   @default("member") // member | admin
+  joinedAt  DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+  @@index([userId])
+  @@index([groupId])
+}
+
+// =============================================================================
+// Shopping List Items
+// =============================================================================
+
+model Item {
+  id        String   @id @default(cuid())
+  name      String
+  quantity  Int?     // optional
+  checked   Boolean  @default(false)
+  addedById String
+  groupId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  addedBy User  @relation("AddedByUser", fields: [addedById], references: [id], onDelete: Cascade)
+  group  Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
+  @@index([groupId, checked, createdAt]) // For efficient "checked at bottom" ordering
+}

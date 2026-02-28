@@ -1,0 +1,12 @@
+---
+description: ShopSyncX project context - read for continuity across sessions
+globs: 
+alwaysApply: true
+---
+
+When working on ShopSyncX, read `docs/PROJECT_CONTEXT.md` for:
+- App hierarchy (Channels → Groups → List)
+- Tech stack, key file paths, API structure
+- Environment setup, common fixes
+
+Reference it with @docs/PROJECT_CONTEXT.md when context is needed.
