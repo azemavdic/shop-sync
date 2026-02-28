@@ -82,3 +82,14 @@ export async function updateProfile(data: {
   if (!res.ok) throw new Error(responseData.message ?? 'Update failed');
   return responseData;
 }
+
+export async function deleteAccount(): Promise<void> {
+  const token = useAuthStore.getState().token;
+  if (!token) throw new Error('Not authenticated');
+  const res = await fetch(`${config.apiUrl}/auth/me`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to delete account');
+}

@@ -148,4 +148,15 @@ export const authController = {
       throw err;
     }
   },
+
+  async deleteAccount(req: FastifyRequest, reply: FastifyReply) {
+    const payload = await req.jwtVerify<{ userId: string }>();
+    try {
+      await authService.deleteAccount(payload.userId);
+      return reply.send({ message: 'Account deleted successfully' });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to delete account';
+      return reply.status(400).send({ message: msg });
+    }
+  },
 };

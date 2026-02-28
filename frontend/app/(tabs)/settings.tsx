@@ -18,7 +18,7 @@ import { useListStore } from '../../stores/listStore';
 import { useTranslation } from '../../i18n';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
-import { updateProfile } from '../../services/auth.service';
+import { updateProfile, deleteAccount } from '../../services/auth.service';
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
@@ -84,6 +84,35 @@ export default function SettingsScreen() {
     ]);
   }
 
+  function handleDeleteAccount() {
+    Alert.alert(
+      t('deleteAccount'),
+      t('deleteAccountConfirm'),
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: t('delete'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAccount();
+              await clearToken();
+              logout();
+              setCurrentGroup(null);
+              setGroups([]);
+              setItems([]);
+              setChannels([]);
+              setCurrentChannel(null);
+              router.replace('/(auth)/login');
+            } catch (err) {
+              Alert.alert(t('error'), err instanceof Error ? err.message : t('failed'));
+            }
+          },
+        },
+      ]
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -119,6 +148,15 @@ export default function SettingsScreen() {
         >
           <Ionicons name="log-out-outline" size={22} color="#ef4444" />
           <Text style={styles.menuItemTextDanger}>{t('signOut')}</Text>
+          <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.menuItem, { marginTop: 12 }]}
+          onPress={handleDeleteAccount}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="trash-outline" size={22} color="#ef4444" />
+          <Text style={styles.menuItemTextDanger}>{t('deleteAccount')}</Text>
           <Ionicons name="chevron-forward" size={20} color="#6b7280" />
         </TouchableOpacity>
       </View>

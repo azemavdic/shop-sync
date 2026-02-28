@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { generateInviteCode } from '../../utils/invite-code.js';
 import * as repo from './groups.repository.js';
+import * as itemsRepo from '../items/items.repository.js';
 
 const prisma = new PrismaClient();
 
@@ -95,5 +96,54 @@ export async function updateGroup(
     channelId: group.channelId,
     itemCount: itemCounts.total,
     checkedItemCount: itemCounts.checked,
+  };
+}
+
+export async function copyGroupToChannel(
+  userId: string,
+  groupId: string,
+  targetChannelId: string,
+  options?: { name?: string }
+) {
+  const [groupMembership, targetChannelMembership] = await Promise.all([
+    repo.findMembership(userId, groupId),
+    prisma.channelMember.findUnique({
+      where: { userId_channelId: { userId, channelId: targetChannelId } },
+    }),
+  ]);
+  if (!groupMembership) throw new Error('Not a member of the group');
+  if (!targetChannelMembership) throw new Error('Not a member of the target channel');
+  const sourceGroup = await repo.getGroup(groupId);
+  if (!sourceGroup) throw new Error('Group not found');
+  const groupName = options?.name?.trim() ?? sourceGroup.name;
+  let code = generateInviteCode();
+  let exists = await repo.findGroupByInviteCode(code);
+  while (exists) {
+    code = generateInviteCode();
+    exists = await repo.findGroupByInviteCode(code);
+  }
+  const newGroup = await repo.createGroup({
+    name: groupName,
+    inviteCode: code,
+    channelId: targetChannelId,
+  });
+  await repo.addMember(userId, newGroup.id, 'admin');
+  const items = await itemsRepo.getItemsByGroup(groupId);
+  for (const item of items) {
+    await itemsRepo.createItem({
+      name: item.name,
+      quantity: item.quantity ?? undefined,
+      addedById: userId,
+      groupId: newGroup.id,
+    });
+  }
+  const itemCounts = await repo.getGroupItemCounts(newGroup.id);
+  return {
+    id: newGroup.id,
+    name: newGroup.name,
+    inviteCode: newGroup.inviteCode,
+    channelId: newGroup.channelId,
+    itemCount: itemCounts.total,
+    checkedItemCount: 0,
   };
 }

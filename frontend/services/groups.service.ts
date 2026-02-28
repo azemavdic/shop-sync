@@ -75,3 +75,24 @@ export async function updateGroup(
   if (!res.ok) throw new Error(data.message ?? 'Failed to update group');
   return data;
 }
+
+export async function copyGroupToChannel(
+  groupId: string,
+  targetChannelId: string,
+  name?: string
+): Promise<Group> {
+  const res = await fetch(
+    `${config.apiUrl}/groups/${groupId}/copy-to-channel`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify({
+        targetChannelId,
+        ...(name && { name }),
+      }),
+    }
+  );
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to copy group');
+  return data.group;
+}

@@ -1,6 +1,11 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import * as groupsService from './groups.service.js';
-import { createGroupSchema, joinGroupSchema, updateGroupSchema } from './groups.schemas.js';
+import {
+  createGroupSchema,
+  joinGroupSchema,
+  updateGroupSchema,
+  copyGroupToChannelSchema,
+} from './groups.schemas.js';
 
 export const groupsController = {
   async create(req: FastifyRequest, reply: FastifyReply) {
@@ -87,6 +92,31 @@ export const groupsController = {
       return reply.send(group);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to update';
+      return reply.status(403).send({ message: msg });
+    }
+  },
+
+  async copyToChannel(req: FastifyRequest, reply: FastifyReply) {
+    const payload = await req.jwtVerify<{ userId: string }>();
+    const { groupId } = req.params as { groupId: string };
+    const parsed = copyGroupToChannelSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ message: parsed.error.errors[0]?.message });
+    }
+    try {
+      const group = await groupsService.copyGroupToChannel(
+        payload.userId,
+        groupId,
+        parsed.data.targetChannelId,
+        { name: parsed.data.name }
+      );
+      return reply.status(201).send({
+        group,
+        message: 'Group copied to channel successfully',
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to copy';
+      if (msg.includes('not found')) return reply.status(404).send({ message: msg });
       return reply.status(403).send({ message: msg });
     }
   },

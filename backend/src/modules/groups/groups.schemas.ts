@@ -11,3 +11,8 @@ export const joinGroupSchema = z.object({
 export const updateGroupSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
 });
+
+export const copyGroupToChannelSchema = z.object({
+  targetChannelId: z.string().min(1, 'Target channel is required'),
+  name: z.string().min(1, 'Name is required').max(100).optional(),
+});

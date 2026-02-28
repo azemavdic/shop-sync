@@ -8,6 +8,7 @@ import {
   createUser,
   createUserFromOAuth,
   updateUser,
+  deleteUser as deleteUserRepo,
 } from './auth.repository.js';
 
 export async function register(
@@ -68,6 +69,10 @@ export async function updateProfile(
   }
   const user = await updateUser(userId, data);
   return { id: user.id, email: user.email, username: user.username, name: user.name };
+}
+
+export async function deleteAccount(userId: string) {
+  await deleteUserRepo(userId);
 }
 
 function deriveUsername(email: string, name: string): string {

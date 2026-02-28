@@ -71,6 +71,8 @@ export const translations = {
     close: 'Zatvori',
     success: 'Uspjeh',
     userInvited: 'Korisnik je pozvan u kanal.',
+    creator: 'kreirao',
+    removeMember: 'Ukloni člana',
 
     // Groups
     myGroups: 'Moje grupe',
@@ -87,6 +89,11 @@ export const translations = {
     leaveGroup: 'Napusti grupu',
     leave: 'Napusti',
     leaveGroupConfirm: 'Napustiti "{name}"? Možete se ponovo pridružiti pomoću pozivnog koda.',
+    copyGroupToChannel: 'Kopiraj u kanal',
+    copyGroupToChannelConfirm: 'Kopirati "{name}" u drugi kanal? Stavke će biti kopirane kao neoznačene.',
+    selectTargetChannel: 'Odaberite kanal',
+    noOtherChannels: 'Niste član drugih kanala. Pridružite se drugom kanalu da biste kopirali grupu.',
+    groupCopied: 'Grupa je uspješno kopirana u kanal.',
     errorInviteCodeLength: 'Pozivni kod mora imati 6 karaktera',
     create: 'Kreiraj',
     join: 'Pridruži se',
@@ -109,6 +116,8 @@ export const translations = {
     // Settings
     settings: 'Postavke',
     editProfile: 'Uredi profil',
+    deleteAccount: 'Obriši nalog',
+    deleteAccountConfirm: 'Da li ste sigurni da želite obrisati nalog? Svi vaši podaci će biti trajno obrisani. Ova akcija se ne može poništiti.',
     language: 'Jezik',
     bosnian: 'Bosanski',
     english: 'English',
@@ -190,6 +199,8 @@ export const translations = {
     close: 'Close',
     success: 'Success',
     userInvited: 'User has been invited to the channel.',
+    creator: 'creator',
+    removeMember: 'Remove member',
 
     // Groups
     myGroups: 'My Groups',
@@ -206,6 +217,11 @@ export const translations = {
     leaveGroup: 'Leave Group',
     leave: 'Leave',
     leaveGroupConfirm: 'Leave "{name}"? You can rejoin with the invite code.',
+    copyGroupToChannel: 'Copy to channel',
+    copyGroupToChannelConfirm: 'Copy "{name}" to another channel? Items will be copied as unchecked.',
+    selectTargetChannel: 'Select target channel',
+    noOtherChannels: 'You are not a member of other channels. Join another channel to copy the group.',
+    groupCopied: 'Group copied to channel successfully.',
     errorInviteCodeLength: 'Invite code must be 6 characters',
     create: 'Create',
     join: 'Join',
@@ -228,6 +244,8 @@ export const translations = {
     // Settings
     settings: 'Settings',
     editProfile: 'Edit profile',
+    deleteAccount: 'Delete account',
+    deleteAccountConfirm: 'Are you sure you want to delete your account? All your data will be permanently removed. This action cannot be undone.',
     language: 'Language',
     bosnian: 'Bosanski',
     english: 'English',

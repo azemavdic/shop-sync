@@ -34,6 +34,7 @@ export default function GroupsTabScreen() {
   const [loading, setLoading] = useState(true);
   const [createModal, setCreateModal] = useState(false);
   const [editModal, setEditModal] = useState<{ id: string; name: string } | null>(null);
+  const [copyModal, setCopyModal] = useState<{ id: string; name: string } | null>(null);
   const [createName, setCreateName] = useState('');
   const [editName, setEditName] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -133,6 +134,32 @@ export default function GroupsTabScreen() {
     }
   }
 
+  function openCopyModal(group: { id: string; name: string }) {
+    setCopyModal(group);
+    setError('');
+  }
+
+  async function handleCopyToChannel(targetChannelId: string) {
+    if (!copyModal) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      await groupsService.copyGroupToChannel(
+        copyModal.id,
+        targetChannelId
+      );
+      setCopyModal(null);
+      if (targetChannelId === channelId) {
+        await fetchGroups(true);
+      }
+      Alert.alert(t('success'), t('groupCopied'));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('failed'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   function handleGroupPress(group: {
     id: string;
     name: string;
@@ -218,25 +245,36 @@ export default function GroupsTabScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
-            <TouchableOpacity
+            <View
               style={[
                 styles.card,
                 (item.itemCount ?? 0) > 0 && (item.checkedItemCount ?? 0) >= (item.itemCount ?? 0)
                   ? styles.cardFinished
                   : styles.cardInProgress,
               ]}
-              onPress={() => handleGroupPress(item)}
-              onLongPress={() => openEdit(item)}
-              activeOpacity={0.7}
             >
-              <View style={styles.cardContent}>
-                <Text style={styles.cardName}>{item.name}</Text>
-                <Text style={styles.cardMeta}>
-                  {item.checkedItemCount ?? 0}/{item.itemCount ?? 0}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={22} color="#6b7280" />
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.cardPressable}
+                onPress={() => handleGroupPress(item)}
+                onLongPress={() => openEdit(item)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.cardContent}>
+                  <Text style={styles.cardName}>{item.name}</Text>
+                  <Text style={styles.cardMeta}>
+                    {item.checkedItemCount ?? 0}/{item.itemCount ?? 0}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={22} color="#6b7280" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                onPress={() => openCopyModal(item)}
+                style={styles.cardAction}
+              >
+                <Ionicons name="copy-outline" size={22} color="#60a5fa" />
+              </TouchableOpacity>
+            </View>
           )}
         />
       )}
@@ -294,6 +332,43 @@ export default function GroupsTabScreen() {
                 style={styles.modalBtn}
               />
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={!!copyModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modal, styles.modalTall]}>
+            <Text style={styles.modalTitle}>
+              {copyModal ? t('copyGroupToChannel') + ': ' + copyModal.name : ''}
+            </Text>
+            <Text style={styles.modalSubtitle}>{t('selectTargetChannel')}</Text>
+            {error ? <Text style={styles.modalError}>{error}</Text> : null}
+            {channels.filter((c) => c.id !== channelId).length === 0 ? (
+              <Text style={styles.emptyChannelText}>{t('noOtherChannels')}</Text>
+            ) : (
+            <FlatList
+              data={channels.filter((c) => c.id !== channelId)}
+              keyExtractor={(c) => c.id}
+              style={styles.channelList}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.channelOption}
+                  onPress={() => handleCopyToChannel(item.id)}
+                  disabled={submitting}
+                >
+                  <Text style={styles.channelOptionName}>{item.name}</Text>
+                  <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+                </TouchableOpacity>
+              )}
+            />
+            )}
+            <Button
+              title={t('cancel')}
+              variant="secondary"
+              onPress={() => setCopyModal(null)}
+              style={styles.modalBtn}
+            />
           </View>
         </View>
       </Modal>
@@ -366,8 +441,23 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingBottom: 40,
   },
+  modalTall: { maxHeight: '80%' },
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#f9fafb', marginBottom: 20 },
+  modalSubtitle: { fontSize: 14, color: '#9ca3af', marginBottom: 16 },
   modalError: { fontSize: 14, color: '#ef4444', marginBottom: 12 },
+  channelList: { maxHeight: 300, marginBottom: 16 },
+  channelOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: '#374151',
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  channelOptionName: { fontSize: 16, color: '#f9fafb', fontWeight: '500' },
+  emptyChannelText: { fontSize: 14, color: '#9ca3af', marginBottom: 16, textAlign: 'center' },
   modalActions: { flexDirection: 'row', gap: 12 },
   modalBtn: { flex: 1 },
 });

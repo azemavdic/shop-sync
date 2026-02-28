@@ -117,3 +117,19 @@ export async function inviteUserToChannel(
     },
   };
 }
+
+export async function removeChannelMember(
+  requesterId: string,
+  channelId: string,
+  targetUserId: string
+) {
+  const channel = await repo.getChannel(channelId);
+  if (!channel) throw new Error('Channel not found');
+  if (channel.createdById !== requesterId)
+    throw new Error('Only the channel creator can remove members');
+  if (targetUserId === channel.createdById)
+    throw new Error('Cannot remove the channel creator');
+  const targetMembership = await repo.findChannelMembership(targetUserId, channelId);
+  if (!targetMembership) throw new Error('User is not in the channel');
+  await repo.removeChannelMember(targetUserId, channelId);
+}

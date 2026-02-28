@@ -20,4 +20,7 @@ export async function authRoutes(fastify: FastifyInstance) {
   fastify.patch('/me', {
     preHandler: [(fastify as any).authenticate],
   }, authController.updateProfile);
+  fastify.delete('/me', {
+    preHandler: [(fastify as any).authenticate],
+  }, authController.deleteAccount);
 }

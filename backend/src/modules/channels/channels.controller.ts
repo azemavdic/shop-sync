@@ -130,4 +130,24 @@ export const channelsController = {
       return reply.status(400).send({ message: msg });
     }
   },
+
+  async removeMember(req: FastifyRequest, reply: FastifyReply) {
+    const payload = await req.jwtVerify<{ userId: string }>();
+    const { channelId, userId: targetUserId } = req.params as {
+      channelId: string;
+      userId: string;
+    };
+    try {
+      await channelsService.removeChannelMember(
+        payload.userId,
+        channelId,
+        targetUserId
+      );
+      return reply.send({ message: 'Member removed from channel' });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to remove';
+      if (msg.includes('not found')) return reply.status(404).send({ message: msg });
+      return reply.status(403).send({ message: msg });
+    }
+  },
 };

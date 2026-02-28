@@ -36,4 +36,9 @@ export async function groupsRoutes(fastify: FastifyInstance) {
     { preHandler: [authGuard] },
     groupsController.update
   );
+  fastify.post(
+    '/groups/:groupId/copy-to-channel',
+    { preHandler: [authGuard] },
+    groupsController.copyToChannel
+  );
 }

@@ -94,6 +94,21 @@ export async function inviteToChannel(
   if (!res.ok) throw new Error(data.message ?? 'Failed to invite');
 }
 
+export async function removeChannelMember(
+  channelId: string,
+  userId: string
+): Promise<void> {
+  const res = await fetch(
+    `${config.apiUrl}/channels/${channelId}/members/${userId}`,
+    {
+      method: 'DELETE',
+      headers: getAuthHeader(),
+    }
+  );
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to remove member');
+}
+
 export async function updateChannel(
   channelId: string,
   name: string

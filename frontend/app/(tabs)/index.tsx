@@ -47,7 +47,11 @@ export default function ChannelsScreen() {
   const [editName, setEditName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [membersModal, setMembersModal] = useState<{ id: string; name: string } | null>(null);
+  const [membersModal, setMembersModal] = useState<{
+    id: string;
+    name: string;
+    createdById?: string;
+  } | null>(null);
   const [inviteModal, setInviteModal] = useState<{ id: string; name: string } | null>(null);
   const [members, setMembers] = useState<ChannelMember[]>([]);
   const [inviteEmailOrUsername, setInviteEmailOrUsername] = useState('');
@@ -197,7 +201,11 @@ export default function ChannelsScreen() {
     Alert.alert(t('copied'), t('inviteCodeCopied'));
   }
 
-  async function openMembersModal(channel: { id: string; name: string }) {
+  async function openMembersModal(channel: {
+    id: string;
+    name: string;
+    createdById?: string;
+  }) {
     setMembersModal(channel);
     setError('');
     try {
@@ -429,16 +437,34 @@ export default function ChannelsScreen() {
               data={members}
               keyExtractor={(m) => m.id}
               style={styles.membersList}
-              renderItem={({ item }) => (
-                <View style={styles.memberRow}>
-                  <View>
-                    <Text style={styles.memberName}>{item.name}</Text>
-                    <Text style={styles.memberMeta}>
-                      {item.username ? `@${item.username}` : item.email} · {item.role}
-                    </Text>
+              renderItem={({ item }) => {
+                const isCreator =
+                  membersModal?.createdById && item.id === membersModal.createdById;
+                const canRemove =
+                  user?.id === membersModal?.createdById &&
+                  item.id !== user?.id &&
+                  !isCreator;
+                return (
+                  <View style={styles.memberRow}>
+                    <View style={styles.memberInfo}>
+                      <Text style={styles.memberName}>{item.name}</Text>
+                      <Text style={styles.memberMeta}>
+                        {item.username ? `@${item.username}` : item.email} ·{' '}
+                        {item.role}
+                        {isCreator ? ' · ' + t('creator') : ''}
+                      </Text>
+                    </View>
+                    {canRemove && (
+                      <TouchableOpacity
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        onPress={() => handleRemoveMember(item.id)}
+                      >
+                        <Ionicons name="person-remove-outline" size={22} color="#ef4444" />
+                      </TouchableOpacity>
+                    )}
                   </View>
-                </View>
-              )}
+                );
+              }}
             />
             <Button
               title={t('close')}
@@ -569,7 +595,15 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#f9fafb', marginBottom: 20 },
   modalTall: { maxHeight: '80%' },
   membersList: { maxHeight: 300, marginBottom: 16 },
-  memberRow: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#374151' },
+  memberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#374151',
+  },
+  memberInfo: { flex: 1 },
   memberName: { fontSize: 16, fontWeight: '600', color: '#f9fafb' },
   memberMeta: { fontSize: 13, color: '#9ca3af', marginTop: 2 },
   modalError: { fontSize: 14, color: '#ef4444', marginBottom: 12 },
