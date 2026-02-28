@@ -1,4 +1,4 @@
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../i18n';
@@ -9,9 +9,9 @@ export default function Index() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
-        <Text style={{ marginTop: 16 }}>{t('loading')}</Text>
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color="#60a5fa" />
+        <Text style={styles.loadingText}>{t('loading')}</Text>
       </View>
     );
   }
@@ -22,3 +22,17 @@ export default function Index() {
 
   return <Redirect href="/(tabs)" />;
 }
+
+const styles = StyleSheet.create({
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#111827',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#9ca3af',
+  },
+});

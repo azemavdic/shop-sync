@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import * as SecureStore from 'expo-secure-store';
 import { useAuthStore } from '../stores/authStore';
 import { config } from '../constants/config';
-
-const TOKEN_KEY = 'shopsyncx_token';
+import {
+  getStoredToken,
+  setStoredToken,
+  removeStoredToken,
+} from '../lib/tokenStorage';
 
 export function useAuth() {
   const { token, isAuthenticated } = useAuthStore();
@@ -12,50 +14,71 @@ export function useAuth() {
   useEffect(() => {
     let mounted = true;
 
-    async function checkAuth() {
+    async function restoreSession() {
       try {
-        const storedToken = await SecureStore.getItemAsync(TOKEN_KEY);
-        if (mounted && storedToken && !token) {
-          // Restore token immediately so other components can use it
-          useAuthStore.setState({ token: storedToken });
-          // Verify session with API
-          const res = await fetch(`${config.apiUrl}/auth/me`, {
-            headers: { Authorization: `Bearer ${storedToken}` },
+        // Already have token in memory (e.g. from same session)
+        if (token) {
+          setIsLoading(false);
+          return;
+        }
+
+        const storedToken = await getStoredToken();
+        if (!storedToken) {
+          setIsLoading(false);
+          return;
+        }
+
+        // Restore token to store so API calls can use it
+        useAuthStore.setState({ token: storedToken });
+
+        // Verify session is still valid
+        const res = await fetch(`${config.apiUrl}/auth/me`, {
+          headers: { Authorization: `Bearer ${storedToken}` },
+        });
+
+        if (!mounted) return;
+
+        if (res.ok) {
+          const user = await res.json();
+          useAuthStore.setState({
+            isAuthenticated: true,
+            user: {
+              id: user.id,
+              email: user.email,
+              username: user.username,
+              name: user.name,
+            },
           });
-          if (res.ok) {
-            const user = await res.json();
-            useAuthStore.setState({
-              isAuthenticated: true,
-              user: { id: user.id, email: user.email, name: user.name },
-            });
-          } else {
-            // Token invalid or expired - clear it
-            useAuthStore.setState({ token: null });
-            await SecureStore.deleteItemAsync(TOKEN_KEY);
-          }
+        } else {
+          // Token expired or invalid - clear it
+          useAuthStore.setState({ token: null, isAuthenticated: false, user: null });
+          await removeStoredToken();
         }
       } catch {
-        // SecureStore or network error - ignore
+        // Network or storage error - clear invalid token if we had one
+        if (mounted) {
+          const currentToken = useAuthStore.getState().token;
+          if (currentToken) {
+            useAuthStore.setState({ token: null, isAuthenticated: false, user: null });
+            await removeStoredToken();
+          }
+        }
       } finally {
         if (mounted) setIsLoading(false);
       }
     }
 
-    if (token) {
-      setIsLoading(false);
-      return;
-    }
-    checkAuth();
+    restoreSession();
     return () => { mounted = false; };
-  }, [token]);
+  }, []); // Run once on mount - token check is inside
 
   return { isAuthenticated, isLoading };
 }
 
 export async function persistToken(t: string) {
-  await SecureStore.setItemAsync(TOKEN_KEY, t);
+  await setStoredToken(t);
 }
 
 export async function clearToken() {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
+  await removeStoredToken();
 }
