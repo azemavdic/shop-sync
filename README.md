@@ -74,6 +74,7 @@ npx expo start
 
 ## Documentation
 
+- [Build Guide](docs/BUILD.md) - Dev server, EAS builds, development APK
 - [Architecture](docs/ARCHITECTURE.md) - System design, data flow, scalability
 - [API Endpoints](docs/API_ENDPOINTS.md) - REST API specification
 - [WebSocket Events](docs/WEBSOCKET_EVENTS.md) - Real-time event design

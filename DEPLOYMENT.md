@@ -130,6 +130,8 @@ eas build --platform android --profile production
 
 ## Quick Reference
 
+See [docs/BUILD.md](docs/BUILD.md) for development build commands.
+
 | Step | Command |
 |------|---------|
 | Deploy backend | `docker compose -f docker-compose.production.yml up -d` |
