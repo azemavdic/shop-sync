@@ -10,7 +10,7 @@ config({ path: resolve(__dirname, '../../.env') });
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
-import fastifySocketIo from 'fastify-socket.io';
+import fastifySocketIo from '@wick_studio/fastify-socket.io';
 import { loadEnv } from './config/env.js';
 import { setIO, setupSocketHandlers } from './socket/index.js';
 
