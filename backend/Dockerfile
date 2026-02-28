@@ -1,5 +1,7 @@
 FROM node:20-slim AS builder
 
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copy prisma first (shared)
@@ -15,6 +17,8 @@ RUN npx prisma generate --schema=../prisma/schema.prisma
 RUN npm run build
 
 FROM node:20-slim
+
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
