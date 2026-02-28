@@ -42,8 +42,11 @@ export const itemsController = {
     if (!parsed.success) {
       return reply.status(400).send({ message: parsed.error.errors[0]?.message });
     }
-    const data = parsed.data as { name?: string; quantity?: number | null; checked?: boolean };
-    if (data.quantity === null) data.quantity = undefined;
+    const raw = parsed.data as { name?: string; quantity?: number | null; checked?: boolean };
+    const data: { name?: string; quantity?: number; checked?: boolean } = {
+      ...raw,
+      quantity: raw.quantity ?? undefined,
+    };
     try {
       const item = await itemsService.updateItem(
         payload.userId,

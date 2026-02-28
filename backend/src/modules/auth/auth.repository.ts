@@ -55,9 +55,10 @@ export async function createUserFromOAuth(data: {
 }) {
   return prisma.user.create({
     data: {
-      ...data,
       email: data.email.toLowerCase(),
       username: data.username.toLowerCase(),
+      password: data.passwordHash,
+      name: data.name,
     },
     select: { id: true, email: true, username: true, name: true, createdAt: true },
   });

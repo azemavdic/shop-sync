@@ -96,24 +96,24 @@ export async function googleAuth(idToken: string) {
   if (!payload?.email) throw new Error('Google did not provide email');
   const email = payload.email.toLowerCase();
   const name = payload.name ?? payload.email.split('@')[0];
-  let user = await findUserByEmail(email);
-  if (!user) {
-    const baseUsername = deriveUsername(email, name);
-    const username = await ensureUniqueUsername(baseUsername);
-    const passwordHash = await hashPassword(randomBytes(32).toString('hex'));
-    const created = await createUserFromOAuth({
-      email,
-      username,
-      passwordHash,
-      name,
-    });
-    user = { ...created, password: '' };
+  const user = await findUserByEmail(email);
+  if (user) {
+    return { id: user.id, email: user.email, username: user.username, name: user.name };
   }
+  const baseUsername = deriveUsername(email, name);
+  const username = await ensureUniqueUsername(baseUsername);
+  const passwordHash = await hashPassword(randomBytes(32).toString('hex'));
+  const created = await createUserFromOAuth({
+    email,
+    username,
+    passwordHash,
+    name,
+  });
   return {
-    id: user.id,
-    email: user.email,
-    username: user.username,
-    name: user.name,
+    id: created.id,
+    email: created.email,
+    username: created.username,
+    name: created.name,
   };
 }
 
@@ -145,23 +145,23 @@ export async function facebookAuth(code: string, redirectUri: string) {
   if (!me.email) throw new Error('Facebook did not provide email. Please grant email permission.');
   const email = me.email.toLowerCase();
   const name = me.name ?? me.email.split('@')[0];
-  let user = await findUserByEmail(email);
-  if (!user) {
-    const baseUsername = deriveUsername(email, name);
-    const username = await ensureUniqueUsername(baseUsername);
-    const passwordHash = await hashPassword(randomBytes(32).toString('hex'));
-    const created = await createUserFromOAuth({
-      email,
-      username,
-      passwordHash,
-      name,
-    });
-    user = { ...created, password: '' };
+  const user = await findUserByEmail(email);
+  if (user) {
+    return { id: user.id, email: user.email, username: user.username, name: user.name };
   }
+  const baseUsername = deriveUsername(email, name);
+  const username = await ensureUniqueUsername(baseUsername);
+  const passwordHash = await hashPassword(randomBytes(32).toString('hex'));
+  const created = await createUserFromOAuth({
+    email,
+    username,
+    passwordHash,
+    name,
+  });
   return {
-    id: user.id,
-    email: user.email,
-    username: user.username,
-    name: user.name,
+    id: created.id,
+    email: created.email,
+    username: created.username,
+    name: created.name,
   };
 }
