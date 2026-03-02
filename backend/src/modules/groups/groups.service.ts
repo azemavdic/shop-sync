@@ -63,13 +63,17 @@ export async function getGroupsByChannel(userId: string, channelId: string) {
     repo.getGroupsByChannel(channelId),
     repo.getCheckedItemCountsByChannel(channelId),
   ]);
-  return groups.map((g) => ({
+  const memberships = await Promise.all(
+    groups.map((g) => repo.findMembership(userId, g.id))
+  );
+  return groups.map((g, i) => ({
     id: g.id,
     name: g.name,
     inviteCode: g.inviteCode,
     channelId: g.channelId,
     itemCount: g._count.items,
     checkedItemCount: checkedCounts[g.id] ?? 0,
+    isAdmin: memberships[i]?.role === 'admin',
   }));
 }
 
@@ -77,6 +81,13 @@ export async function leaveGroup(userId: string, groupId: string) {
   const membership = await repo.findMembership(userId, groupId);
   if (!membership) throw new Error('Not a member');
   await repo.removeMember(userId, groupId);
+}
+
+export async function deleteGroup(userId: string, groupId: string) {
+  const membership = await repo.findMembership(userId, groupId);
+  if (!membership) throw new Error('Not a member');
+  if (membership.role !== 'admin') throw new Error('Only admins can delete the group');
+  await repo.deleteGroup(groupId);
 }
 
 export async function updateGroup(

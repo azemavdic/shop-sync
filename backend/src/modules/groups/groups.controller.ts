@@ -96,6 +96,18 @@ export const groupsController = {
     }
   },
 
+  async delete(req: FastifyRequest, reply: FastifyReply) {
+    const payload = await req.jwtVerify<{ userId: string }>();
+    const { groupId } = req.params as { groupId: string };
+    try {
+      await groupsService.deleteGroup(payload.userId, groupId);
+      return reply.send({ message: 'Group deleted successfully' });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to delete';
+      return reply.status(403).send({ message: msg });
+    }
+  },
+
   async copyToChannel(req: FastifyRequest, reply: FastifyReply) {
     const payload = await req.jwtVerify<{ userId: string }>();
     const { groupId } = req.params as { groupId: string };

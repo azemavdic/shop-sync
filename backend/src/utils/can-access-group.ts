@@ -6,14 +6,21 @@ const prisma = new PrismaClient();
 export async function canAccessGroup(
   userId: string,
   groupId: string
-): Promise<boolean> {
+): Promise<false | { canAccess: true; isAdmin: boolean }> {
   const group = await prisma.group.findUnique({
     where: { id: groupId },
     select: { channelId: true },
   });
   if (!group) return false;
-  const m = await prisma.channelMember.findUnique({
+  const channelMember = await prisma.channelMember.findUnique({
     where: { userId_channelId: { userId, channelId: group.channelId } },
   });
-  return !!m;
+  if (!channelMember) return false;
+  const groupMember = await prisma.groupMember.findUnique({
+    where: { userId_groupId: { userId, groupId } },
+  });
+  return {
+    canAccess: true,
+    isAdmin: groupMember?.role === 'admin',
+  };
 }

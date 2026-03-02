@@ -54,6 +54,17 @@ export async function removeChannelMember(userId: string, channelId: string) {
   });
 }
 
+export async function removeUserFromChannelGroups(userId: string, channelId: string) {
+  const groups = await prisma.group.findMany({
+    where: { channelId },
+    select: { id: true },
+  });
+  const groupIds = groups.map((g) => g.id);
+  await prisma.groupMember.deleteMany({
+    where: { userId, groupId: { in: groupIds } },
+  });
+}
+
 export async function updateChannel(
   channelId: string,
   data: { name?: string }

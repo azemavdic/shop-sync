@@ -131,5 +131,7 @@ export async function removeChannelMember(
     throw new Error('Cannot remove the channel creator');
   const targetMembership = await repo.findChannelMembership(targetUserId, channelId);
   if (!targetMembership) throw new Error('User is not in the channel');
+  // Remove from all groups in this channel first (avoid orphaned group memberships)
+  await repo.removeUserFromChannelGroups(targetUserId, channelId);
   await repo.removeChannelMember(targetUserId, channelId);
 }

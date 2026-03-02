@@ -13,6 +13,7 @@ export interface Group {
   channelId?: string;
   itemCount?: number;
   checkedItemCount?: number;
+  isAdmin?: boolean;
 }
 
 export async function createGroup(
@@ -60,6 +61,15 @@ export async function leaveGroup(groupId: string): Promise<void> {
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message ?? 'Failed to leave group');
+}
+
+export async function deleteGroup(groupId: string): Promise<void> {
+  const res = await fetch(`${config.apiUrl}/groups/${groupId}/delete`, {
+    method: 'DELETE',
+    headers: getAuthHeader(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to delete group');
 }
 
 export async function updateGroup(

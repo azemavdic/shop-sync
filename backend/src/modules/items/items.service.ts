@@ -63,9 +63,12 @@ export async function updateItem(
 }
 
 export async function deleteItem(userId: string, groupId: string, itemId: string) {
-  if (!(await canAccessGroup(userId, groupId))) throw new Error('Not a channel member');
+  const access = await canAccessGroup(userId, groupId);
+  if (!access) throw new Error('Not a channel member');
+  const { isAdmin } = access;
   const item = await repo.getItem(itemId, groupId);
   if (!item) throw new Error('Item not found');
-  if (item.addedById !== userId) throw new Error('Only the user who created the item can delete it');
+  if (item.addedById !== userId && !isAdmin)
+    throw new Error('Only the item creator or group admin can delete it');
   await repo.deleteItem(itemId, groupId);
 }

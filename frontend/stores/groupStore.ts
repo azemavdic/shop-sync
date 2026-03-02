@@ -7,6 +7,7 @@ export interface Group {
   channelId?: string;
   itemCount?: number;
   checkedItemCount?: number;
+  isAdmin?: boolean;
 }
 
 interface GroupState {

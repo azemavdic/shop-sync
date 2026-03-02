@@ -6,6 +6,9 @@ import {
   TouchableOpacity,
   Alert,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -155,7 +158,7 @@ export default function SettingsScreen() {
           onPress={handleDeleteAccount}
           activeOpacity={0.7}
         >
-          <Ionicons name="trash-outline" size={22} color="#ef4444" />
+          <Ionicons name="warning-outline" size={22} color="#ef4444" />
           <Text style={styles.menuItemTextDanger}>{t('deleteAccount')}</Text>
           <Ionicons name="chevron-forward" size={20} color="#6b7280" />
         </TouchableOpacity>
@@ -166,39 +169,49 @@ export default function SettingsScreen() {
       </View>
 
       <Modal visible={editModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <Text style={styles.modalTitle}>{t('editProfile')}</Text>
-            <Input
-              label={t('name')}
-              placeholder={t('namePlaceholder')}
-              value={editName}
-              onChangeText={setEditName}
-            />
-            <Input
-              label={t('username')}
-              placeholder={t('usernamePlaceholder')}
-              value={editUsername}
-              onChangeText={setEditUsername}
-              autoCapitalize="none"
-            />
-            {error ? <Text style={styles.modalError}>{error}</Text> : null}
-            <View style={styles.modalActions}>
-              <Button
-                title={t('cancel')}
-                variant="secondary"
-                onPress={() => setEditModal(false)}
-                style={styles.modalBtn}
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={0}
+        >
+          <ScrollView
+            contentContainerStyle={styles.modalScroll}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.modal}>
+              <Text style={styles.modalTitle}>{t('editProfile')}</Text>
+              <Input
+                label={t('name')}
+                placeholder={t('namePlaceholder')}
+                value={editName}
+                onChangeText={setEditName}
               />
-              <Button
-                title={t('save')}
-                onPress={handleSaveProfile}
-                loading={submitting}
-                style={styles.modalBtn}
+              <Input
+                label={t('username')}
+                placeholder={t('usernamePlaceholder')}
+                value={editUsername}
+                onChangeText={setEditUsername}
+                autoCapitalize="none"
               />
+              {error ? <Text style={styles.modalError}>{error}</Text> : null}
+              <View style={styles.modalActions}>
+                <Button
+                  title={t('cancel')}
+                  variant="secondary"
+                  onPress={() => setEditModal(false)}
+                  style={styles.modalBtn}
+                />
+                <Button
+                  title={t('save')}
+                  onPress={handleSaveProfile}
+                  loading={submitting}
+                  style={styles.modalBtn}
+                />
+              </View>
             </View>
-          </View>
-        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
@@ -268,6 +281,10 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalScroll: {
+    flexGrow: 1,
     justifyContent: 'flex-end',
   },
   modal: {

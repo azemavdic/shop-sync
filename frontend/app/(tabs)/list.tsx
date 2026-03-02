@@ -11,7 +11,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   RefreshControl,
+  Modal,
+  ScrollView,
 } from 'react-native';
+import { SwipeableRow } from '../../components/ui/SwipeableRow';
+import { Input } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../stores/authStore';
@@ -41,6 +46,10 @@ export default function ListScreen() {
   const [newItemName, setNewItemName] = useState('');
   const [newItemQty, setNewItemQty] = useState('');
   const [adding, setAdding] = useState(false);
+  const [editModal, setEditModal] = useState<ListItem | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editQty, setEditQty] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   async function fetchItems(silent = false) {
     if (!currentGroup) {
@@ -92,6 +101,32 @@ export default function ListScreen() {
       });
     } catch {
       updateItem(item.id, { checked: prev });
+    }
+  }
+
+  function openEditModal(item: ListItem) {
+    setEditModal(item);
+    setEditName(item.name);
+    setEditQty(item.quantity ? String(item.quantity) : '');
+  }
+
+  async function handleEditSave() {
+    if (!currentGroup || !editModal) return;
+    const name = editName.trim();
+    if (!name) return;
+    setEditSubmitting(true);
+    try {
+      const qty = editQty ? parseInt(editQty, 10) : undefined;
+      const updated = await itemsService.updateItem(currentGroup.id, editModal.id, {
+        name,
+        quantity: qty && !isNaN(qty) ? qty : undefined,
+      });
+      updateItem(editModal.id, { name: updated.name, quantity: updated.quantity });
+      setEditModal(null);
+    } catch (err) {
+      Alert.alert(t('error'), err instanceof Error ? err.message : t('failed'));
+    } finally {
+      setEditSubmitting(false);
     }
   }
 
@@ -195,48 +230,97 @@ export default function ListScreen() {
               tintColor="#60a5fa"
             />
           }
-          renderItem={({ item }) => (
-            <View style={[styles.item, item.checked && styles.itemChecked]}>
-              <TouchableOpacity
-                style={styles.checkbox}
-                onPress={() => handleToggle(item)}
+          renderItem={({ item }) => {
+            const canDelete =
+              item.addedById === user?.id || currentGroup?.isAdmin;
+            return (
+              <SwipeableRow
+                onDelete={() => handleDelete(item)}
+                disabled={!canDelete}
+                deleteLabel={t('delete')}
               >
-                <Ionicons
-                  name={item.checked ? 'checkbox' : 'square-outline'}
-                  size={24}
-                  color={item.checked ? '#60a5fa' : '#6b7280'}
-                />
-              </TouchableOpacity>
-              <View style={styles.itemContent}>
-                <Text
-                  style={[
-                    styles.itemName,
-                    item.checked && styles.itemNameChecked,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {item.name}
-                </Text>
-                  {(item.quantity || item.addedByName) && (
-                  <Text style={styles.itemMeta}>
-                    {item.quantity ? `${t('qtyLabel')} ${item.quantity}` : ''}
-                    {item.quantity && item.addedByName ? ' · ' : ''}
-                    {item.addedByName ? `${t('by')} ${item.addedByName}` : ''}
-                  </Text>
-                )}
-              </View>
-              {item.addedById === user?.id && (
                 <TouchableOpacity
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  onPress={() => handleDelete(item)}
+                  style={[styles.item, item.checked && styles.itemChecked]}
+                  onPress={() => handleToggle(item)}
+                  onLongPress={() => openEditModal(item)}
+                  activeOpacity={0.7}
                 >
-                  <Ionicons name="trash-outline" size={20} color="#6b7280" />
+                  <View style={styles.checkbox}>
+                    <Ionicons
+                      name={item.checked ? 'checkbox' : 'square-outline'}
+                      size={24}
+                      color={item.checked ? '#60a5fa' : '#6b7280'}
+                    />
+                  </View>
+                  <View style={styles.itemContent}>
+                    <Text
+                      style={[
+                        styles.itemName,
+                        item.checked && styles.itemNameChecked,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {item.name}
+                    </Text>
+                    {(item.quantity || item.addedByName) && (
+                      <Text style={styles.itemMeta}>
+                        {item.quantity ? `${t('qtyLabel')} ${item.quantity}` : ''}
+                        {item.quantity && item.addedByName ? ' · ' : ''}
+                        {item.addedByName ? `${t('by')} ${item.addedByName}` : ''}
+                      </Text>
+                    )}
+                  </View>
                 </TouchableOpacity>
-              )}
-            </View>
-          )}
+              </SwipeableRow>
+            );
+          }}
         />
       )}
+
+      <Modal visible={!!editModal} transparent animationType="slide">
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={0}
+        >
+          <ScrollView
+            contentContainerStyle={styles.modalScroll}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.modal}>
+              <Text style={styles.modalTitle}>{t('editItem')}</Text>
+              <Input
+                label={t('itemName')}
+                value={editName}
+                onChangeText={setEditName}
+                placeholder={t('addItem')}
+              />
+              <Input
+                label={t('qty')}
+                value={editQty}
+                onChangeText={setEditQty}
+                placeholder={t('qty')}
+                keyboardType="number-pad"
+              />
+              <View style={styles.modalActions}>
+                <Button
+                  title={t('cancel')}
+                  variant="secondary"
+                  onPress={() => setEditModal(null)}
+                  style={styles.modalBtn}
+                />
+                <Button
+                  title={t('save')}
+                  onPress={handleEditSave}
+                  loading={editSubmitting}
+                  style={styles.modalBtn}
+                />
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -310,4 +394,23 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 16, color: '#f9fafb' },
   itemNameChecked: { textDecorationLine: 'line-through', color: '#9ca3af' },
   itemMeta: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalScroll: {
+    flexGrow: 1,
+    justifyContent: 'flex-end',
+  },
+  modal: {
+    backgroundColor: '#1f2937',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#f9fafb', marginBottom: 20 },
+  modalActions: { flexDirection: 'row', gap: 12 },
+  modalBtn: { flex: 1 },
 });

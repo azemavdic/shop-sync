@@ -9,7 +9,12 @@ import {
   Modal,
   ActivityIndicator,
   RefreshControl,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
+import { SwipeableRow } from '../../components/ui/SwipeableRow';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -91,8 +96,33 @@ export default function GroupsTabScreen() {
     }
   }
 
+  async function handleDeleteGroup(groupId: string, groupName: string) {
+    Alert.alert(
+      t('deleteGroup'),
+      tWithParams('deleteGroupConfirm', { name: groupName }),
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: t('delete'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await groupsService.deleteGroup(groupId);
+              removeGroup(groupId);
+              if (currentGroup?.id === groupId) {
+                setCurrentGroup(null);
+                router.replace('/(tabs)/groups');
+              }
+            } catch (err) {
+              Alert.alert(t('error'), err instanceof Error ? err.message : t('failed'));
+            }
+          },
+        },
+      ]
+    );
+  }
+
   async function handleLeave(groupId: string, groupName: string) {
-    const { Alert } = await import('react-native');
     Alert.alert(
       t('leaveGroup'),
       tWithParams('leaveGroupConfirm', { name: groupName }),
@@ -165,12 +195,14 @@ export default function GroupsTabScreen() {
     name: string;
     inviteCode: string;
     channelId?: string;
+    isAdmin?: boolean;
   }) {
     setCurrentGroup({
       id: group.id,
       name: group.name,
       inviteCode: group.inviteCode,
       channelId: group.channelId,
+      isAdmin: group.isAdmin,
     });
     router.push('/(tabs)/list');
   }
@@ -244,96 +276,128 @@ export default function GroupsTabScreen() {
           })}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <View
-              style={[
-                styles.card,
-                (item.itemCount ?? 0) > 0 && (item.checkedItemCount ?? 0) >= (item.itemCount ?? 0)
-                  ? styles.cardFinished
-                  : styles.cardInProgress,
-              ]}
-            >
-              <TouchableOpacity
-                style={styles.cardPressable}
-                onPress={() => handleGroupPress(item)}
-                onLongPress={() => openEdit(item)}
-                activeOpacity={0.7}
+          renderItem={({ item }) => {
+            const isAdmin = item.isAdmin ?? false;
+            const onSwipeAction = () =>
+              isAdmin ? handleDeleteGroup(item.id, item.name) : handleLeave(item.id, item.name);
+            return (
+              <SwipeableRow
+                onDelete={onSwipeAction}
+                deleteLabel={isAdmin ? t('delete') : t('leave')}
               >
-                <View style={styles.cardContent}>
-                  <Text style={styles.cardName}>{item.name}</Text>
-                  <Text style={styles.cardMeta}>
-                    {item.checkedItemCount ?? 0}/{item.itemCount ?? 0}
-                  </Text>
+                <View
+                  style={[
+                    styles.card,
+                    (item.itemCount ?? 0) > 0 && (item.checkedItemCount ?? 0) >= (item.itemCount ?? 0)
+                      ? styles.cardFinished
+                      : styles.cardInProgress,
+                  ]}
+                >
+                  <TouchableOpacity
+                    style={styles.cardPressable}
+                    onPress={() => handleGroupPress(item)}
+                    onLongPress={() => openEdit(item)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.cardContent}>
+                      <Text style={styles.cardName}>{item.name}</Text>
+                      <Text style={styles.cardMeta}>
+                        {item.checkedItemCount ?? 0}/{item.itemCount ?? 0}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={22} color="#6b7280" />
+                  </TouchableOpacity>
+                  <View style={styles.cardActions}>
+                    <TouchableOpacity
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      onPress={() => openCopyModal(item)}
+                      style={styles.cardAction}
+                    >
+                      <Ionicons name="copy-outline" size={22} color="#60a5fa" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <Ionicons name="chevron-forward" size={22} color="#6b7280" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                onPress={() => openCopyModal(item)}
-                style={styles.cardAction}
-              >
-                <Ionicons name="copy-outline" size={22} color="#60a5fa" />
-              </TouchableOpacity>
-            </View>
-          )}
+              </SwipeableRow>
+            );
+          }}
         />
       )}
 
       <Modal visible={createModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <Text style={styles.modalTitle}>{t('createGroup')}</Text>
-            <Input
-              label={t('groupName')}
-              placeholder={t('groupNamePlaceholder')}
-              value={createName}
-              onChangeText={setCreateName}
-            />
-            {error ? <Text style={styles.modalError}>{error}</Text> : null}
-            <View style={styles.modalActions}>
-              <Button
-                title={t('cancel')}
-                variant="secondary"
-                onPress={() => setCreateModal(false)}
-                style={styles.modalBtn}
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={0}
+        >
+          <ScrollView
+            contentContainerStyle={styles.modalScroll}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.modal}>
+              <Text style={styles.modalTitle}>{t('createGroup')}</Text>
+              <Input
+                label={t('groupName')}
+                placeholder={t('groupNamePlaceholder')}
+                value={createName}
+                onChangeText={setCreateName}
               />
-              <Button
-                title={t('create')}
-                onPress={handleCreate}
-                loading={submitting}
-                style={styles.modalBtn}
-              />
+              {error ? <Text style={styles.modalError}>{error}</Text> : null}
+              <View style={styles.modalActions}>
+                <Button
+                  title={t('cancel')}
+                  variant="secondary"
+                  onPress={() => setCreateModal(false)}
+                  style={styles.modalBtn}
+                />
+                <Button
+                  title={t('create')}
+                  onPress={handleCreate}
+                  loading={submitting}
+                  style={styles.modalBtn}
+                />
+              </View>
             </View>
-          </View>
-        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal visible={!!editModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <Text style={styles.modalTitle}>{t('editGroup')}</Text>
-            <Input
-              label={t('groupName')}
-              value={editName}
-              onChangeText={setEditName}
-            />
-            {error ? <Text style={styles.modalError}>{error}</Text> : null}
-            <View style={styles.modalActions}>
-              <Button
-                title={t('cancel')}
-                variant="secondary"
-                onPress={() => setEditModal(null)}
-                style={styles.modalBtn}
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={0}
+        >
+          <ScrollView
+            contentContainerStyle={styles.modalScroll}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.modal}>
+              <Text style={styles.modalTitle}>{t('editGroup')}</Text>
+              <Input
+                label={t('groupName')}
+                value={editName}
+                onChangeText={setEditName}
               />
-              <Button
-                title={t('save')}
-                onPress={handleUpdate}
-                loading={submitting}
-                style={styles.modalBtn}
-              />
+              {error ? <Text style={styles.modalError}>{error}</Text> : null}
+              <View style={styles.modalActions}>
+                <Button
+                  title={t('cancel')}
+                  variant="secondary"
+                  onPress={() => setEditModal(null)}
+                  style={styles.modalBtn}
+                />
+                <Button
+                  title={t('save')}
+                  onPress={handleUpdate}
+                  loading={submitting}
+                  style={styles.modalBtn}
+                />
+              </View>
             </View>
-          </View>
-        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal visible={!!copyModal} transparent animationType="slide">
@@ -426,12 +490,19 @@ const styles = StyleSheet.create({
   cardFinished: {
     borderLeftColor: '#22c55e',
   },
+  cardPressable: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   cardContent: { flex: 1 },
   cardName: { fontSize: 16, fontWeight: '600', color: '#f9fafb' },
   cardMeta: { fontSize: 13, color: '#9ca3af', marginTop: 4 },
+  cardActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  cardAction: { padding: 8 },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalScroll: {
+    flexGrow: 1,
     justifyContent: 'flex-end',
   },
   modal: {

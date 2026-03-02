@@ -9,12 +9,16 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
+import { SwipeableRow } from '../../components/ui/SwipeableRow';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
-import { useChannelStore } from '../../stores/channelStore';
+import { useChannelStore, type Channel } from '../../stores/channelStore';
 import { useAuthStore } from '../../stores/authStore';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
@@ -191,7 +195,7 @@ export default function ChannelsScreen() {
     }
   }
 
-  function handleChannelPress(channel: { id: string; name: string }) {
+  function handleChannelPress(channel: Channel) {
     setCurrentChannel(channel);
     router.push('/(tabs)/groups');
   }
@@ -220,6 +224,18 @@ export default function ChannelsScreen() {
     setInviteModal(channel);
     setInviteEmailOrUsername('');
     setError('');
+  }
+
+  async function handleRemoveMember(memberId: string) {
+    if (!membersModal) return;
+    try {
+      await channelsService.removeChannelMember(membersModal.id, memberId);
+      const data = await channelsService.getChannelMembers(membersModal.id);
+      setMembers(data);
+      fetchChannels(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('failed'));
+    }
   }
 
   async function handleInvite() {
@@ -272,7 +288,7 @@ export default function ChannelsScreen() {
               setJoinCode('');
             }}
           >
-            <Ionicons name="person-add" size={26} color="#60a5fa" />
+            <Ionicons name="key-outline" size={26} color="#60a5fa" />
           </TouchableOpacity>
         </View>
       </View>
@@ -301,7 +317,15 @@ export default function ChannelsScreen() {
           }
           renderItem={({ item }) => {
             const isCreator = user?.id && item.createdById === user.id;
+            const onSwipeAction = () =>
+              isCreator
+                ? handleDeleteChannel(item.id, item.name)
+                : handleLeave(item.id, item.name);
             return (
+              <SwipeableRow
+                onDelete={onSwipeAction}
+                deleteLabel={isCreator ? t('delete') : t('leave')}
+              >
               <View
                 style={[
                   styles.card,
@@ -330,6 +354,14 @@ export default function ChannelsScreen() {
                   </View>
                 </TouchableOpacity>
                 <View style={styles.cardActions}>
+                  {isCreator && (
+                    <TouchableOpacity
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      onPress={() => openEdit(item)}
+                    >
+                      <Ionicons name="pencil-outline" size={22} color="#60a5fa" />
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     onPress={() => openMembersModal(item)}
@@ -342,14 +374,6 @@ export default function ChannelsScreen() {
                   >
                     <Ionicons name="person-add-outline" size={22} color="#60a5fa" />
                   </TouchableOpacity>
-                  {isCreator && (
-                    <TouchableOpacity
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                      onPress={() => handleDeleteChannel(item.id, item.name)}
-                    >
-                      <Ionicons name="trash-outline" size={22} color="#ef4444" />
-                    </TouchableOpacity>
-                  )}
                   <TouchableOpacity
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     onPress={() => handleLeave(item.id, item.name)}
@@ -358,6 +382,7 @@ export default function ChannelsScreen() {
                   </TouchableOpacity>
                 </View>
               </View>
+              </SwipeableRow>
             );
           }}
         />
@@ -365,64 +390,84 @@ export default function ChannelsScreen() {
 
       {/* Create Modal */}
       <Modal visible={createModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <Text style={styles.modalTitle}>{t('createChannel')}</Text>
-            <Input
-              label={t('channelName')}
-              placeholder={t('channelNamePlaceholder')}
-              value={createName}
-              onChangeText={setCreateName}
-            />
-            {error ? <Text style={styles.modalError}>{error}</Text> : null}
-            <View style={styles.modalActions}>
-              <Button
-                title={t('cancel')}
-                variant="secondary"
-                onPress={() => setCreateModal(false)}
-                style={styles.modalBtn}
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={0}
+        >
+          <ScrollView
+            contentContainerStyle={styles.modalScroll}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.modal}>
+              <Text style={styles.modalTitle}>{t('createChannel')}</Text>
+              <Input
+                label={t('channelName')}
+                placeholder={t('channelNamePlaceholder')}
+                value={createName}
+                onChangeText={setCreateName}
               />
-              <Button
-                title={t('create')}
-                onPress={handleCreate}
-                loading={submitting}
-                style={styles.modalBtn}
-              />
+              {error ? <Text style={styles.modalError}>{error}</Text> : null}
+              <View style={styles.modalActions}>
+                <Button
+                  title={t('cancel')}
+                  variant="secondary"
+                  onPress={() => setCreateModal(false)}
+                  style={styles.modalBtn}
+                />
+                <Button
+                  title={t('create')}
+                  onPress={handleCreate}
+                  loading={submitting}
+                  style={styles.modalBtn}
+                />
+              </View>
             </View>
-          </View>
-        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Join Modal */}
       <Modal visible={joinModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <Text style={styles.modalTitle}>{t('joinChannel')}</Text>
-            <Input
-              label={t('inviteCode')}
-              placeholder={t('inviteCodePlaceholder')}
-              value={joinCode}
-              onChangeText={(t) => setJoinCode(t.toUpperCase().slice(0, 6))}
-              maxLength={6}
-              autoCapitalize="characters"
-            />
-            {error ? <Text style={styles.modalError}>{error}</Text> : null}
-            <View style={styles.modalActions}>
-              <Button
-                title={t('cancel')}
-                variant="secondary"
-                onPress={() => setJoinModal(false)}
-                style={styles.modalBtn}
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={0}
+        >
+          <ScrollView
+            contentContainerStyle={styles.modalScroll}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.modal}>
+              <Text style={styles.modalTitle}>{t('joinChannel')}</Text>
+              <Input
+                label={t('inviteCode')}
+                placeholder={t('inviteCodePlaceholder')}
+                value={joinCode}
+                onChangeText={(t) => setJoinCode(t.toUpperCase().slice(0, 6))}
+                maxLength={6}
+                autoCapitalize="characters"
               />
-              <Button
-                title={t('join')}
-                onPress={handleJoin}
-                loading={submitting}
-                style={styles.modalBtn}
-              />
+              {error ? <Text style={styles.modalError}>{error}</Text> : null}
+              <View style={styles.modalActions}>
+                <Button
+                  title={t('cancel')}
+                  variant="secondary"
+                  onPress={() => setJoinModal(false)}
+                  style={styles.modalBtn}
+                />
+                <Button
+                  title={t('join')}
+                  onPress={handleJoin}
+                  loading={submitting}
+                  style={styles.modalBtn}
+                />
+              </View>
             </View>
-          </View>
-        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Members Modal */}
@@ -478,64 +523,84 @@ export default function ChannelsScreen() {
 
       {/* Invite Modal */}
       <Modal visible={!!inviteModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <Text style={styles.modalTitle}>
-              {inviteModal ? t('inviteToChannel') + ': ' + inviteModal.name : ''}
-            </Text>
-            <Input
-              label={t('emailOrUsername')}
-              placeholder={t('emailOrUsernamePlaceholder')}
-              value={inviteEmailOrUsername}
-              onChangeText={setInviteEmailOrUsername}
-              autoCapitalize="none"
-            />
-            {error ? <Text style={styles.modalError}>{error}</Text> : null}
-            <View style={styles.modalActions}>
-              <Button
-                title={t('cancel')}
-                variant="secondary"
-                onPress={() => setInviteModal(null)}
-                style={styles.modalBtn}
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={0}
+        >
+          <ScrollView
+            contentContainerStyle={styles.modalScroll}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.modal}>
+              <Text style={styles.modalTitle}>
+                {inviteModal ? t('inviteToChannel') + ': ' + inviteModal.name : ''}
+              </Text>
+              <Input
+                label={t('emailOrUsername')}
+                placeholder={t('emailOrUsernamePlaceholder')}
+                value={inviteEmailOrUsername}
+                onChangeText={setInviteEmailOrUsername}
+                autoCapitalize="none"
               />
-              <Button
-                title={t('invite')}
-                onPress={handleInvite}
-                loading={submitting}
-                style={styles.modalBtn}
-              />
+              {error ? <Text style={styles.modalError}>{error}</Text> : null}
+              <View style={styles.modalActions}>
+                <Button
+                  title={t('cancel')}
+                  variant="secondary"
+                  onPress={() => setInviteModal(null)}
+                  style={styles.modalBtn}
+                />
+                <Button
+                  title={t('invite')}
+                  onPress={handleInvite}
+                  loading={submitting}
+                  style={styles.modalBtn}
+                />
+              </View>
             </View>
-          </View>
-        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Edit Modal */}
       <Modal visible={!!editModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <Text style={styles.modalTitle}>{t('editChannel')}</Text>
-            <Input
-              label={t('channelName')}
-              value={editName}
-              onChangeText={setEditName}
-            />
-            {error ? <Text style={styles.modalError}>{error}</Text> : null}
-            <View style={styles.modalActions}>
-              <Button
-                title={t('cancel')}
-                variant="secondary"
-                onPress={() => setEditModal(null)}
-                style={styles.modalBtn}
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={0}
+        >
+          <ScrollView
+            contentContainerStyle={styles.modalScroll}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.modal}>
+              <Text style={styles.modalTitle}>{t('editChannel')}</Text>
+              <Input
+                label={t('channelName')}
+                value={editName}
+                onChangeText={setEditName}
               />
-              <Button
-                title={t('save')}
-                onPress={handleUpdate}
-                loading={submitting}
-                style={styles.modalBtn}
-              />
+              {error ? <Text style={styles.modalError}>{error}</Text> : null}
+              <View style={styles.modalActions}>
+                <Button
+                  title={t('cancel')}
+                  variant="secondary"
+                  onPress={() => setEditModal(null)}
+                  style={styles.modalBtn}
+                />
+                <Button
+                  title={t('save')}
+                  onPress={handleUpdate}
+                  loading={submitting}
+                  style={styles.modalBtn}
+                />
+              </View>
             </View>
-          </View>
-        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
@@ -583,6 +648,10 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalScroll: {
+    flexGrow: 1,
     justifyContent: 'flex-end',
   },
   modal: {

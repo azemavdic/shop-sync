@@ -80,3 +80,9 @@ export async function getGroup(groupId: string) {
     include: { _count: { select: { members: true } }, channel: true },
   });
 }
+
+export async function deleteGroup(groupId: string) {
+  return prisma.group.delete({
+    where: { id: groupId },
+  });
+}
