@@ -24,12 +24,16 @@ export const itemsController = {
       return reply.status(400).send({ message: parsed.error.errors[0]?.message });
     }
     try {
-      const item = await itemsService.addItem(
+      const { item, merged } = await itemsService.addItem(
         payload.userId,
         groupId,
         parsed.data
       );
-      socket.emitItemAdded(groupId, item);
+      if (merged) {
+        socket.emitItemEdited(groupId, item);
+      } else {
+        socket.emitItemAdded(groupId, item);
+      }
       return reply.status(201).send(item);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed';

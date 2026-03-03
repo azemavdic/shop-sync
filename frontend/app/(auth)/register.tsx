@@ -3,6 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
+  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -15,10 +16,11 @@ import { OAuthButtons } from '../../components/auth/OAuthButtons';
 import { useAuthStore } from '../../stores/authStore';
 import { persistToken } from '../../hooks/useAuth';
 import { register } from '../../services/auth.service';
-import { useTranslation } from '../../i18n';
+import { useTranslation, useLanguageStore } from '../../i18n';
 
 export default function RegisterScreen() {
   const { t } = useTranslation();
+  const { locale, setLocale } = useLanguageStore();
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -77,6 +79,24 @@ export default function RegisterScreen() {
         <View style={styles.header}>
           <Text style={styles.logo}>ShopSyncX</Text>
           <Text style={styles.subtitle}>{t('createAccountSubtitle')}</Text>
+          <View style={styles.langRow}>
+            <TouchableOpacity
+              style={[styles.langBtn, locale === 'bs' && styles.langBtnActive]}
+              onPress={() => setLocale('bs')}
+            >
+              <Text style={[styles.langBtnText, locale === 'bs' && styles.langBtnTextActive]}>
+                {t('bosnian')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.langBtn, locale === 'en' && styles.langBtnActive]}
+              onPress={() => setLocale('en')}
+            >
+              <Text style={[styles.langBtnText, locale === 'en' && styles.langBtnTextActive]}>
+                {t('english')}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.form}>
@@ -158,6 +178,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#9ca3af',
   },
+  langRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  langBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#1f2937',
+    alignItems: 'center',
+  },
+  langBtnActive: { backgroundColor: '#60a5fa' },
+  langBtnText: { fontSize: 15, color: '#9ca3af' },
+  langBtnTextActive: { color: '#111827', fontWeight: '600' },
   form: {
     marginBottom: 32,
   },

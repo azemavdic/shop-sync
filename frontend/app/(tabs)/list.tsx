@@ -39,6 +39,8 @@ export default function ListScreen() {
   // Sync group item counts and prices when list changes
   useEffect(() => {
     if (!currentGroup) return;
+    const groups = useGroupStore.getState().groups;
+    if (!groups.some((g) => g.id === currentGroup.id)) return;
     const itemCount = items.length;
     const checkedItemCount = items.filter((i) => i.checked).length;
     const totalPrice = items.reduce(
@@ -122,7 +124,11 @@ export default function ListScreen() {
         newItemName.trim(),
         qty && !isNaN(qty) ? qty : 1
       );
-      addItem(item);
+      if (items.some((i) => i.id === item.id)) {
+        updateItem(item.id, { quantity: item.quantity, price: item.price });
+      } else {
+        addItem(item);
+      }
       setNewItemName('');
       setNewItemQty('1');
       setTimeout(() => itemNameInputRef.current?.focus(), 0);

@@ -25,16 +25,11 @@ export async function groupsRoutes(fastify: FastifyInstance) {
   // Join group (by invite code - can be from any channel user is in)
   fastify.post('/groups/join', { preHandler: [authGuard] }, groupsController.join);
 
-  // Group actions (groupId in path) - more specific routes first
-  fastify.delete(
-    '/groups/:groupId/delete',
-    { preHandler: [authGuard] },
-    groupsController.delete
-  );
+  // Group actions (groupId in path)
   fastify.delete(
     '/groups/:groupId',
     { preHandler: [authGuard] },
-    groupsController.leave
+    groupsController.deleteOrLeave
   );
   fastify.patch(
     '/groups/:groupId',

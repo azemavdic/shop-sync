@@ -122,7 +122,9 @@ export async function getGroup(groupId: string) {
 }
 
 export async function deleteGroup(groupId: string) {
-  return prisma.group.delete({
-    where: { id: groupId },
+  await prisma.$transaction(async (tx) => {
+    await tx.item.deleteMany({ where: { groupId } });
+    await tx.groupMember.deleteMany({ where: { groupId } });
+    await tx.group.delete({ where: { id: groupId } });
   });
 }

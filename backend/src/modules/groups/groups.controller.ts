@@ -64,15 +64,18 @@ export const groupsController = {
     }
   },
 
-  async leave(req: FastifyRequest, reply: FastifyReply) {
+  async deleteOrLeave(req: FastifyRequest, reply: FastifyReply) {
     const payload = await req.jwtVerify<{ userId: string }>();
     const { groupId } = req.params as { groupId: string };
     try {
-      await groupsService.leaveGroup(payload.userId, groupId);
-      return reply.send({ message: 'Left group successfully' });
+      const result = await groupsService.deleteOrLeaveGroup(payload.userId, groupId);
+      return reply.send({
+        message: result.deleted ? 'Group deleted successfully' : 'Left group successfully',
+        deleted: result.deleted,
+      });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to leave';
-      return reply.status(400).send({ message: msg });
+      const msg = err instanceof Error ? err.message : 'Failed';
+      return reply.status(403).send({ message: msg });
     }
   },
 
@@ -96,17 +99,6 @@ export const groupsController = {
     }
   },
 
-  async delete(req: FastifyRequest, reply: FastifyReply) {
-    const payload = await req.jwtVerify<{ userId: string }>();
-    const { groupId } = req.params as { groupId: string };
-    try {
-      await groupsService.deleteGroup(payload.userId, groupId);
-      return reply.send({ message: 'Group deleted successfully' });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to delete';
-      return reply.status(403).send({ message: msg });
-    }
-  },
 
   async copyToChannel(req: FastifyRequest, reply: FastifyReply) {
     const payload = await req.jwtVerify<{ userId: string }>();

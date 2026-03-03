@@ -90,11 +90,18 @@ export async function leaveGroup(userId: string, groupId: string) {
   await repo.removeMember(userId, groupId);
 }
 
-export async function deleteGroup(userId: string, groupId: string) {
+export async function deleteOrLeaveGroup(
+  userId: string,
+  groupId: string
+): Promise<{ deleted: boolean }> {
   const membership = await repo.findMembership(userId, groupId);
   if (!membership) throw new Error('Not a member');
-  if (membership.role !== 'admin') throw new Error('Only admins can delete the group');
-  await repo.deleteGroup(groupId);
+  if (membership.role === 'admin') {
+    await repo.deleteGroup(groupId);
+    return { deleted: true };
+  }
+  await repo.removeMember(userId, groupId);
+  return { deleted: false };
 }
 
 export async function updateGroup(

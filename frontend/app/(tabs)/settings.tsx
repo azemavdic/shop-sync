@@ -19,12 +19,14 @@ import { useChannelStore } from '../../stores/channelStore';
 import { useGroupStore } from '../../stores/groupStore';
 import { useListStore } from '../../stores/listStore';
 import { useTranslation } from '../../i18n';
+import { useLanguageStore } from '../../i18n';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { updateProfile, deleteAccount } from '../../services/auth.service';
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
+  const { locale, setLocale } = useLanguageStore();
   const { user, logout, updateUser } = useAuthStore();
   const [editModal, setEditModal] = useState(false);
   const [editName, setEditName] = useState('');
@@ -119,7 +121,29 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Settings</Text>
+        <Text style={styles.title}>{t('settings')}</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{t('language')}</Text>
+        <View style={styles.langRow}>
+          <TouchableOpacity
+            style={[styles.langBtn, locale === 'bs' && styles.langBtnActive]}
+            onPress={() => setLocale('bs')}
+          >
+            <Text style={[styles.langBtnText, locale === 'bs' && styles.langBtnTextActive]}>
+              {t('bosnian')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.langBtn, locale === 'en' && styles.langBtnActive]}
+            onPress={() => setLocale('en')}
+          >
+            <Text style={[styles.langBtnText, locale === 'en' && styles.langBtnTextActive]}>
+              {t('english')}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.section}>

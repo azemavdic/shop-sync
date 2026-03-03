@@ -33,24 +33,45 @@ export async function addItem(
     select: { channelId: true },
   });
   if (!group) throw new Error('Group not found');
+  const nameTrimmed = data.name.trim();
+  const addQty = data.quantity ?? 1;
+  const existing = await repo.findItemByGroupAndName(groupId, nameTrimmed);
+  if (existing) {
+    const newQty = (existing.quantity ?? 1) + addQty;
+    await repo.updateItem(existing.id, groupId, { quantity: newQty });
+    const item = await repo.getItem(existing.id, groupId);
+    if (!item) throw new Error('Item not found');
+    const result = {
+      id: item.id,
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price != null ? Number(item.price) : null,
+      checked: item.checked,
+      addedById: item.addedById,
+      addedByName: item.addedBy.name,
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString(),
+    };
+    return { item: result, merged: true };
+  }
   let price: number | undefined;
   try {
     price = await articlesService.findOrCreateArticle(
       userId,
       group.channelId,
-      data.name.trim()
+      nameTrimmed
     );
   } catch {
     price = undefined;
   }
   const item = await repo.createItem({
-    name: data.name.trim(),
-    quantity: data.quantity ?? 1,
+    name: nameTrimmed,
+    quantity: addQty,
     price,
     addedById: userId,
     groupId,
   });
-  return {
+  const result = {
     id: item.id,
     name: item.name,
     quantity: item.quantity,
@@ -61,6 +82,7 @@ export async function addItem(
     createdAt: item.createdAt.toISOString(),
     updatedAt: item.updatedAt.toISOString(),
   };
+  return { item: result, merged: false };
 }
 
 export async function updateItem(

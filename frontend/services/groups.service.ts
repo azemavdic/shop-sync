@@ -66,7 +66,7 @@ export async function leaveGroup(groupId: string): Promise<void> {
 }
 
 export async function deleteGroup(groupId: string): Promise<void> {
-  const res = await fetch(`${config.apiUrl}/groups/${groupId}/delete`, {
+  const res = await fetch(`${config.apiUrl}/groups/${groupId}`, {
     method: 'DELETE',
     headers: getAuthHeader(),
   });

@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useChannelStore } from '../../stores/channelStore';
 import { useGroupStore } from '../../stores/groupStore';
+import { useListStore } from '../../stores/listStore';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import * as groupsService from '../../services/groups.service';
@@ -31,12 +32,14 @@ export default function GroupsTabScreen() {
   const { currentChannel, channels, setCurrentChannel } = useChannelStore();
   const {
     groups,
+    currentGroup,
     setGroups,
     setCurrentGroup,
     addGroup,
     removeGroup,
     updateGroup,
   } = useGroupStore();
+  const setItems = useListStore((s) => s.setItems);
   const [loading, setLoading] = useState(true);
   const [createModal, setCreateModal] = useState(false);
   const [editModal, setEditModal] = useState<{ id: string; name: string } | null>(null);
@@ -109,8 +112,12 @@ export default function GroupsTabScreen() {
           onPress: async () => {
             try {
               await groupsService.deleteGroup(groupId);
+              const wasCurrent = currentGroup?.id === groupId;
+              if (wasCurrent) {
+                setItems([]);
+              }
               removeGroup(groupId);
-              if (currentGroup?.id === groupId) {
+              if (wasCurrent) {
                 setCurrentGroup(null);
                 router.replace('/(tabs)/groups');
               }

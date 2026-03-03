@@ -50,6 +50,17 @@ export async function getItem(itemId: string, groupId: string) {
   });
 }
 
+export async function findItemByGroupAndName(groupId: string, name: string) {
+  const nameLower = name.trim().toLowerCase();
+  const items = await prisma.item.findMany({
+    where: { groupId },
+    include: {
+      addedBy: { select: { id: true, name: true } },
+    },
+  });
+  return items.find((i) => i.name.trim().toLowerCase() === nameLower) ?? null;
+}
+
 export async function deleteItem(itemId: string, groupId: string) {
   return prisma.item.deleteMany({
     where: { id: itemId, groupId },
