@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,8 @@ import { useAuthStore } from '../../stores/authStore';
 import { useGroupStore } from '../../stores/groupStore';
 import { useListStore, ListItem } from '../../stores/listStore';
 import * as itemsService from '../../services/items.service';
+import * as articlesService from '../../services/articles.service';
+import { formatPrice } from '../../utils/format';
 import { useTranslation } from '../../i18n';
 import { useListSocket } from '../../hooks/useSocket';
 
@@ -34,22 +36,38 @@ export default function ListScreen() {
     useListStore();
   useListSocket(currentGroup?.id);
 
-  // Sync group item counts when list changes (for green/red line and X/Y display)
+  // Sync group item counts and prices when list changes
   useEffect(() => {
     if (!currentGroup) return;
     const itemCount = items.length;
     const checkedItemCount = items.filter((i) => i.checked).length;
-    updateGroup(currentGroup.id, { itemCount, checkedItemCount });
+    const totalPrice = items.reduce(
+      (sum, i) => sum + (i.price ?? 0) * (i.quantity ?? 1),
+      0
+    );
+    const checkedPrice = items
+      .filter((i) => i.checked)
+      .reduce((sum, i) => sum + (i.price ?? 0) * (i.quantity ?? 1), 0);
+    updateGroup(currentGroup.id, {
+      itemCount,
+      checkedItemCount,
+      totalPrice,
+      checkedPrice,
+    });
   }, [items, currentGroup?.id]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [newItemName, setNewItemName] = useState('');
-  const [newItemQty, setNewItemQty] = useState('');
+  const [newItemQty, setNewItemQty] = useState('1');
   const [adding, setAdding] = useState(false);
   const [editModal, setEditModal] = useState<ListItem | null>(null);
   const [editName, setEditName] = useState('');
   const [editQty, setEditQty] = useState('');
+  const [editPrice, setEditPrice] = useState('');
   const [editSubmitting, setEditSubmitting] = useState(false);
+  const [articleSuggestions, setArticleSuggestions] = useState<articlesService.Article[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const itemNameInputRef = useRef<TextInput>(null);
 
   async function fetchItems(silent = false) {
     if (!currentGroup) {
@@ -71,19 +89,43 @@ export default function ListScreen() {
     fetchItems();
   }, [currentGroup?.id]);
 
+  // Fetch article suggestions for autocomplete
+  useEffect(() => {
+    if (!currentGroup?.channelId || !newItemName.trim()) {
+      setArticleSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    const t = setTimeout(async () => {
+      try {
+        const articles = await articlesService.getArticles(
+          currentGroup.channelId!,
+          newItemName.trim()
+        );
+        setArticleSuggestions(articles);
+        setShowSuggestions(articles.length > 0);
+      } catch {
+        setArticleSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }, 200);
+    return () => clearTimeout(t);
+  }, [currentGroup?.channelId, newItemName]);
+
   async function handleAdd() {
     if (!currentGroup || !newItemName.trim()) return;
     setAdding(true);
     try {
-      const qty = newItemQty ? parseInt(newItemQty, 10) : undefined;
+      const qty = newItemQty ? parseInt(newItemQty, 10) : 1;
       const item = await itemsService.addItem(
         currentGroup.id,
         newItemName.trim(),
-        qty && !isNaN(qty) ? qty : undefined
+        qty && !isNaN(qty) ? qty : 1
       );
       addItem(item);
       setNewItemName('');
-      setNewItemQty('');
+      setNewItemQty('1');
+      setTimeout(() => itemNameInputRef.current?.focus(), 0);
     } catch (err) {
       Alert.alert(t('error'), err instanceof Error ? err.message : t('failed'));
     } finally {
@@ -107,7 +149,8 @@ export default function ListScreen() {
   function openEditModal(item: ListItem) {
     setEditModal(item);
     setEditName(item.name);
-    setEditQty(item.quantity ? String(item.quantity) : '');
+    setEditQty(item.quantity ? String(item.quantity) : '1');
+    setEditPrice(item.price != null ? String(item.price) : '');
   }
 
   async function handleEditSave() {
@@ -116,12 +159,18 @@ export default function ListScreen() {
     if (!name) return;
     setEditSubmitting(true);
     try {
-      const qty = editQty ? parseInt(editQty, 10) : undefined;
+      const qty = editQty ? parseInt(editQty, 10) : 1;
+      const price = editPrice ? parseFloat(editPrice) : undefined;
       const updated = await itemsService.updateItem(currentGroup.id, editModal.id, {
         name,
-        quantity: qty && !isNaN(qty) ? qty : undefined,
+        quantity: qty && !isNaN(qty) ? qty : 1,
+        price: price != null && !isNaN(price) ? price : null,
       });
-      updateItem(editModal.id, { name: updated.name, quantity: updated.quantity });
+      updateItem(editModal.id, {
+        name: updated.name,
+        quantity: updated.quantity,
+        price: updated.price,
+      });
       setEditModal(null);
     } catch (err) {
       Alert.alert(t('error'), err instanceof Error ? err.message : t('failed'));
@@ -168,41 +217,85 @@ export default function ListScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>{currentGroup.name}</Text>
-        <Text style={styles.subtitle}>{t('shoppingList')}</Text>
+        <Text style={styles.subtitle}>
+          {t('shoppingList')}
+          {(() => {
+            const total = items.reduce(
+              (sum, i) => sum + (i.price ?? 0) * (i.quantity ?? 1),
+              0
+            );
+            const checked = items
+              .filter((i) => i.checked)
+              .reduce((sum, i) => sum + (i.price ?? 0) * (i.quantity ?? 1), 0);
+            if (total > 0) {
+              return ` · ${formatPrice(total)}${checked > 0 ? ` (${t('checked')}: ${formatPrice(checked)})` : ''}`;
+            }
+            return '';
+          })()}
+        </Text>
       </View>
 
-      <KeyboardAvoidingView
-        style={styles.addRow}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <TextInput
-          style={styles.input}
-          placeholder={t('addItem')}
-          placeholderTextColor="#6b7280"
-          value={newItemName}
-          onChangeText={setNewItemName}
-          onSubmitEditing={handleAdd}
-        />
-        <TextInput
-          style={styles.qtyInput}
-          placeholder={t('qty')}
-          placeholderTextColor="#6b7280"
-          value={newItemQty}
-          onChangeText={setNewItemQty}
-          keyboardType="number-pad"
-        />
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={handleAdd}
-          disabled={adding || !newItemName.trim()}
+      <View>
+        <KeyboardAvoidingView
+          style={styles.addRow}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          {adding ? (
-            <ActivityIndicator size="small" color="#111827" />
-          ) : (
-            <Ionicons name="add" size={24} color="#111827" />
-          )}
-        </TouchableOpacity>
-      </KeyboardAvoidingView>
+          <TextInput
+            ref={itemNameInputRef}
+            style={styles.input}
+            placeholder={t('addItem')}
+            placeholderTextColor="#6b7280"
+            value={newItemName}
+            onChangeText={(v) => {
+              setNewItemName(v);
+              setShowSuggestions(true);
+            }}
+            onFocus={() => articleSuggestions.length > 0 && setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+            onSubmitEditing={handleAdd}
+          />
+          <TextInput
+            style={styles.qtyInput}
+            placeholder={t('qty')}
+            placeholderTextColor="#6b7280"
+            value={newItemQty}
+            onChangeText={setNewItemQty}
+            keyboardType="number-pad"
+          />
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={handleAdd}
+            disabled={adding || !newItemName.trim()}
+          >
+            {adding ? (
+              <ActivityIndicator size="small" color="#111827" />
+            ) : (
+              <Ionicons name="add" size={24} color="#111827" />
+            )}
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+        {showSuggestions && articleSuggestions.length > 0 && (
+          <View style={styles.suggestions}>
+            {articleSuggestions.slice(0, 5).map((a) => (
+              <TouchableOpacity
+                key={a.id}
+                style={styles.suggestionItem}
+                onPress={() => {
+                  setNewItemName(a.name);
+                  setShowSuggestions(false);
+                }}
+              >
+                <Text style={styles.suggestionName}>{a.name}</Text>
+                {a.price > 0 && (
+                  <Text style={styles.suggestionPrice}>
+                    {a.price.toFixed(2)}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
 
       {loading ? (
         <View style={styles.loading}>
@@ -262,11 +355,23 @@ export default function ListScreen() {
                     >
                       {item.name}
                     </Text>
-                    {(item.quantity || item.addedByName) && (
+                    {[
+                      item.quantity ? `${t('qtyLabel')} ${item.quantity}` : '',
+                      item.price != null && item.price > 0
+                        ? formatPrice(item.price * (item.quantity ?? 1))
+                        : '',
+                      item.addedByName ? `${t('by')} ${item.addedByName}` : '',
+                    ].filter(Boolean).length > 0 && (
                       <Text style={styles.itemMeta}>
-                        {item.quantity ? `${t('qtyLabel')} ${item.quantity}` : ''}
-                        {item.quantity && item.addedByName ? ' · ' : ''}
-                        {item.addedByName ? `${t('by')} ${item.addedByName}` : ''}
+                        {[
+                          item.quantity ? `${t('qtyLabel')} ${item.quantity}` : '',
+                          item.price != null && item.price > 0
+                            ? formatPrice(item.price * (item.quantity ?? 1))
+                            : '',
+                          item.addedByName ? `${t('by')} ${item.addedByName}` : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
                       </Text>
                     )}
                   </View>
@@ -302,6 +407,13 @@ export default function ListScreen() {
                 onChangeText={setEditQty}
                 placeholder={t('qty')}
                 keyboardType="number-pad"
+              />
+              <Input
+                label={t('price')}
+                value={editPrice}
+                onChangeText={setEditPrice}
+                placeholder={t('pricePlaceholder')}
+                keyboardType="decimal-pad"
               />
               <View style={styles.modalActions}>
                 <Button
@@ -394,6 +506,23 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 16, color: '#f9fafb' },
   itemNameChecked: { textDecorationLine: 'line-through', color: '#9ca3af' },
   itemMeta: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+  suggestions: {
+    backgroundColor: '#1f2937',
+    borderBottomWidth: 1,
+    borderBottomColor: '#374151',
+    maxHeight: 180,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#374151',
+  },
+  suggestionName: { fontSize: 16, color: '#f9fafb' },
+  suggestionPrice: { fontSize: 14, color: '#60a5fa' },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',

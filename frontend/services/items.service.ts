@@ -10,6 +10,7 @@ export interface ListItem {
   id: string;
   name: string;
   quantity?: number;
+  price?: number | null;
   checked: boolean;
   addedById: string;
   addedByName?: string;
@@ -44,7 +45,7 @@ export async function addItem(
 export async function updateItem(
   groupId: string,
   itemId: string,
-  updates: { name?: string; quantity?: number; checked?: boolean }
+  updates: { name?: string; quantity?: number; price?: number | null; checked?: boolean }
 ): Promise<ListItem> {
   const res = await fetch(
     `${config.apiUrl}/groups/${groupId}/items/${itemId}`,

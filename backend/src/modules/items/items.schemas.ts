@@ -8,5 +8,6 @@ export const addItemSchema = z.object({
 export const updateItemSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   quantity: z.number().int().positive().optional().nullable(),
+  price: z.number().min(0).optional().nullable(),
   checked: z.boolean().optional(),
 });

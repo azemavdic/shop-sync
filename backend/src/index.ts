@@ -37,11 +37,13 @@ async function bootstrap() {
 
   const { authRoutes } = await import('./modules/auth/auth.routes.js');
   const { channelsRoutes } = await import('./modules/channels/channels.routes.js');
+  const { articlesRoutes } = await import('./modules/articles/articles.routes.js');
   const { groupsRoutes } = await import('./modules/groups/groups.routes.js');
   const { itemsRoutes } = await import('./modules/items/items.routes.js');
 
   await fastify.register(authRoutes, { prefix: '/api/v1/auth' });
   await fastify.register(channelsRoutes, { prefix: '/api/v1/channels' });
+  await fastify.register(articlesRoutes, { prefix: '/api/v1/channels' });
   await fastify.register(groupsRoutes, { prefix: '/api/v1' });
   await fastify.register(itemsRoutes, { prefix: '/api/v1/groups' });
 

@@ -43,6 +43,7 @@ export function useListSocket(groupId: string | undefined) {
           id: item.id,
           name: item.name,
           quantity: item.quantity,
+          price: item.price,
           checked: item.checked ?? false,
           addedById: item.addedById,
           addedByName: item.addedByName,
@@ -54,6 +55,7 @@ export function useListSocket(groupId: string | undefined) {
         updateItem(item.id, {
           name: item.name,
           quantity: item.quantity,
+          price: item.price,
           checked: item.checked,
           updatedAt: item.updatedAt,
         });

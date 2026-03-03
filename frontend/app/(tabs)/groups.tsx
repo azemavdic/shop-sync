@@ -24,6 +24,7 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import * as groupsService from '../../services/groups.service';
 import { useTranslation } from '../../i18n';
+import { formatPrice } from '../../utils/format';
 
 export default function GroupsTabScreen() {
   const { t, tWithParams } = useTranslation();
@@ -303,6 +304,11 @@ export default function GroupsTabScreen() {
                       <Text style={styles.cardName}>{item.name}</Text>
                       <Text style={styles.cardMeta}>
                         {item.checkedItemCount ?? 0}/{item.itemCount ?? 0}
+                        {' · '}
+                        {formatPrice(item.totalPrice ?? 0)}
+                        {(item.checkedPrice ?? 0) > 0 && (
+                          <> ({t('checked')}: {formatPrice(item.checkedPrice ?? 0)})</>
+                        )}
                       </Text>
                     </View>
                     <Ionicons name="chevron-forward" size={22} color="#6b7280" />

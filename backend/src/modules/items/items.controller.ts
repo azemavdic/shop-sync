@@ -44,8 +44,8 @@ export const itemsController = {
     if (!parsed.success) {
       return reply.status(400).send({ message: parsed.error.errors[0]?.message });
     }
-    const raw = parsed.data as { name?: string; quantity?: number | null; checked?: boolean };
-    const data: { name?: string; quantity?: number; checked?: boolean } = {
+    const raw = parsed.data as { name?: string; quantity?: number | null; price?: number | null; checked?: boolean };
+    const data: { name?: string; quantity?: number; price?: number | null; checked?: boolean } = {
       ...raw,
       quantity: raw.quantity ?? undefined,
     };

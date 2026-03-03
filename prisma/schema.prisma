@@ -45,6 +45,7 @@ model Channel {
   createdBy User            @relation(fields: [createdById], references: [id], onDelete: Cascade)
   members   ChannelMember[]
   groups    Group[]
+  articles  Article[]
 }
 
 model ChannelMember {
@@ -95,13 +96,33 @@ model GroupMember {
 }
 
 // =============================================================================
+// Articles (products with prices, per channel)
+// =============================================================================
+
+model Article {
+  id        String   @id @default(cuid())
+  name      String
+  nameLower String   // lowercase for case-insensitive uniqueness
+  price     Decimal  @default(0) @db.Decimal(10, 2)
+  channelId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, nameLower])
+  @@index([channelId])
+}
+
+// =============================================================================
 // Shopping List Items
 // =============================================================================
 
 model Item {
   id        String   @id @default(cuid())
   name      String
-  quantity  Int?     // optional
+  quantity  Int      @default(1)
+  price     Decimal? @db.Decimal(10, 2) // price per unit, from article or user override
   checked   Boolean  @default(false)
   addedById String
   groupId   String

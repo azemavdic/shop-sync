@@ -15,11 +15,15 @@ export async function getItemsByGroup(groupId: string) {
 export async function createItem(data: {
   name: string;
   quantity?: number;
+  price?: number;
   addedById: string;
   groupId: string;
 }) {
   return prisma.item.create({
-    data,
+    data: {
+      ...data,
+      quantity: data.quantity ?? 1,
+    },
     include: {
       addedBy: { select: { id: true, name: true } },
     },
@@ -29,7 +33,7 @@ export async function createItem(data: {
 export async function updateItem(
   itemId: string,
   groupId: string,
-  data: { name?: string; quantity?: number; checked?: boolean }
+  data: { name?: string; quantity?: number; price?: number | null; checked?: boolean }
 ) {
   return prisma.item.updateMany({
     where: { id: itemId, groupId },

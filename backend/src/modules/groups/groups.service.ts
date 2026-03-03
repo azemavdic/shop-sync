@@ -59,10 +59,15 @@ export async function joinGroup(userId: string, inviteCode: string) {
 export async function getGroupsByChannel(userId: string, channelId: string) {
   if (!(await isChannelMember(userId, channelId)))
     throw new Error('Not a channel member');
-  const [groups, checkedCounts] = await Promise.all([
-    repo.getGroupsByChannel(channelId),
-    repo.getCheckedItemCountsByChannel(channelId),
-  ]);
+  const [groups, checkedCounts, totalPricesResult, checkedPricesResult] =
+    await Promise.all([
+      repo.getGroupsByChannel(channelId),
+      repo.getCheckedItemCountsByChannel(channelId),
+      repo.getGroupTotalPricesByChannel(channelId).catch(() => ({})),
+      repo.getGroupCheckedPricesByChannel(channelId).catch(() => ({})),
+    ]);
+  const totalPrices = totalPricesResult as Record<string, number>;
+  const checkedPrices = checkedPricesResult as Record<string, number>;
   const memberships = await Promise.all(
     groups.map((g) => repo.findMembership(userId, g.id))
   );
@@ -73,6 +78,8 @@ export async function getGroupsByChannel(userId: string, channelId: string) {
     channelId: g.channelId,
     itemCount: g._count.items,
     checkedItemCount: checkedCounts[g.id] ?? 0,
+    totalPrice: totalPrices[g.id] ?? 0,
+    checkedPrice: checkedPrices[g.id] ?? 0,
     isAdmin: memberships[i]?.role === 'admin',
   }));
 }
@@ -143,7 +150,8 @@ export async function copyGroupToChannel(
   for (const item of items) {
     await itemsRepo.createItem({
       name: item.name,
-      quantity: item.quantity ?? undefined,
+      quantity: item.quantity ?? 1,
+      price: item.price != null ? Number(item.price) : undefined,
       addedById: userId,
       groupId: newGroup.id,
     });

@@ -4,6 +4,7 @@ export interface ListItem {
   id: string;
   name: string;
   quantity?: number;
+  price?: number | null;
   checked: boolean;
   addedById: string;
   addedByName?: string;

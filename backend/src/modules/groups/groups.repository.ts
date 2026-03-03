@@ -60,6 +60,46 @@ export async function getGroupItemCounts(groupId: string) {
   return { total, checked };
 }
 
+export async function getGroupTotalPricesByChannel(channelId: string) {
+  const groups = await prisma.group.findMany({
+    where: { channelId },
+    select: { id: true },
+  });
+  const prices: Record<string, number> = {};
+  for (const g of groups) {
+    const items = await prisma.item.findMany({
+      where: { groupId: g.id },
+      select: { price: true, quantity: true },
+    });
+    const total = items.reduce(
+      (sum, i) => sum + Number(i.price ?? 0) * (i.quantity ?? 1),
+      0
+    );
+    prices[g.id] = total;
+  }
+  return prices;
+}
+
+export async function getGroupCheckedPricesByChannel(channelId: string) {
+  const groups = await prisma.group.findMany({
+    where: { channelId },
+    select: { id: true },
+  });
+  const prices: Record<string, number> = {};
+  for (const g of groups) {
+    const items = await prisma.item.findMany({
+      where: { groupId: g.id, checked: true },
+      select: { price: true, quantity: true },
+    });
+    const total = items.reduce(
+      (sum, i) => sum + Number(i.price ?? 0) * (i.quantity ?? 1),
+      0
+    );
+    prices[g.id] = total;
+  }
+  return prices;
+}
+
 export async function removeMember(userId: string, groupId: string) {
   return prisma.groupMember.delete({
     where: { userId_groupId: { userId, groupId } },

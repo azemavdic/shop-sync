@@ -7,6 +7,8 @@ export interface Group {
   channelId?: string;
   itemCount?: number;
   checkedItemCount?: number;
+  totalPrice?: number;
+  checkedPrice?: number;
   isAdmin?: boolean;
 }
 
