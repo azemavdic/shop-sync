@@ -14,6 +14,7 @@ export async function getItems(userId: string, groupId: string) {
     quantity: i.quantity,
     price: i.price != null ? Number(i.price) : null,
     checked: i.checked,
+    position: i.position,
     addedById: i.addedById,
     addedByName: i.addedBy.name,
     createdAt: i.createdAt.toISOString(),
@@ -47,6 +48,7 @@ export async function addItem(
       quantity: item.quantity,
       price: item.price != null ? Number(item.price) : null,
       checked: item.checked,
+      position: item.position,
       addedById: item.addedById,
       addedByName: item.addedBy.name,
       createdAt: item.createdAt.toISOString(),
@@ -77,6 +79,7 @@ export async function addItem(
     quantity: item.quantity,
     price: item.price != null ? Number(item.price) : null,
     checked: item.checked,
+    position: item.position,
     addedById: item.addedById,
     addedByName: item.addedBy.name,
     createdAt: item.createdAt.toISOString(),
@@ -117,11 +120,29 @@ export async function updateItem(
     quantity: item.quantity,
     price: item.price != null ? Number(item.price) : null,
     checked: item.checked,
+    position: item.position,
     addedById: item.addedById,
     addedByName: item.addedBy.name,
     createdAt: item.createdAt.toISOString(),
     updatedAt: item.updatedAt.toISOString(),
   };
+}
+
+export async function reorderItems(userId: string, groupId: string, itemIds: string[]) {
+  if (!(await canAccessGroup(userId, groupId))) throw new Error('Not a channel member');
+  const items = await repo.reorderItems(groupId, itemIds);
+  return items.map((i) => ({
+    id: i.id,
+    name: i.name,
+    quantity: i.quantity,
+    price: i.price != null ? Number(i.price) : null,
+    checked: i.checked,
+    position: i.position,
+    addedById: i.addedById,
+    addedByName: i.addedBy.name,
+    createdAt: i.createdAt.toISOString(),
+    updatedAt: i.updatedAt.toISOString(),
+  }));
 }
 
 export async function deleteItem(userId: string, groupId: string, itemId: string) {

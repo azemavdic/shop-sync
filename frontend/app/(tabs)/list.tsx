@@ -1,9 +1,9 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
   TextInput,
   Alert,
@@ -14,6 +14,7 @@ import {
   Modal,
   ScrollView,
 } from 'react-native';
+import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import { SwipeableRow } from '../../components/ui/SwipeableRow';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
@@ -26,15 +27,12 @@ import * as itemsService from '../../services/items.service';
 import * as articlesService from '../../services/articles.service';
 import { formatPrice } from '../../utils/format';
 import { useTranslation } from '../../i18n';
-import { useListSocket } from '../../hooks/useSocket';
-
 export default function ListScreen() {
   const { t, tWithParams } = useTranslation();
   const { user } = useAuthStore();
   const { currentGroup, updateGroup } = useGroupStore();
-  const { items, setItems, addItem, updateItem, removeItem, getOrderedItems } =
+  const { items, setItems, addItem, updateItem, removeItem, reorderItems, getOrderedItems } =
     useListStore();
-  useListSocket(currentGroup?.id);
 
   // Sync group item counts and prices when list changes
   useEffect(() => {
@@ -90,6 +88,21 @@ export default function ListScreen() {
   useEffect(() => {
     fetchItems();
   }, [currentGroup?.id]);
+
+  // Refetch when returning to list screen - ensures sync even if socket missed
+  useFocusEffect(
+    useCallback(() => {
+      if (currentGroup?.id) fetchItems(true);
+      // Poll every 5s while on list - fallback if socket doesn't deliver
+      const interval = setInterval(() => {
+        const group = useGroupStore.getState().currentGroup;
+        if (group?.id) {
+          itemsService.getItems(group.id).then(setItems).catch(() => {});
+        }
+      }, 5000);
+      return () => clearInterval(interval);
+    }, [currentGroup?.id])
+  );
 
   // Fetch article suggestions for autocomplete
   useEffect(() => {
@@ -182,6 +195,17 @@ export default function ListScreen() {
       Alert.alert(t('error'), err instanceof Error ? err.message : t('failed'));
     } finally {
       setEditSubmitting(false);
+    }
+  }
+
+  async function handleReorder(newOrder: ListItem[]) {
+    if (!currentGroup) return;
+    const itemIds = newOrder.map((i) => i.id);
+    reorderItems(itemIds);
+    try {
+      await itemsService.reorderItems(currentGroup.id, itemIds);
+    } catch (err) {
+      fetchItems(true); // revert on error
     }
   }
 
@@ -314,9 +338,10 @@ export default function ListScreen() {
           <Text style={styles.emptySub}>{t('noItemsSub')}</Text>
         </View>
       ) : (
-        <FlatList
+        <DraggableFlatList
           data={orderedItems}
           keyExtractor={(item) => item.id}
+          onDragEnd={({ data }) => handleReorder(data)}
           contentContainerStyle={styles.list}
           refreshControl={
             <RefreshControl
@@ -329,7 +354,7 @@ export default function ListScreen() {
               tintColor="#60a5fa"
             />
           }
-          renderItem={({ item }) => {
+          renderItem={({ item, drag, isActive }: RenderItemParams<ListItem>) => {
             const canDelete =
               item.addedById === user?.id || currentGroup?.isAdmin;
             return (
@@ -339,48 +364,64 @@ export default function ListScreen() {
                 deleteLabel={t('delete')}
               >
                 <TouchableOpacity
-                  style={[styles.item, item.checked && styles.itemChecked]}
-                  onPress={() => handleToggle(item)}
-                  onLongPress={() => openEditModal(item)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.checkbox}>
-                    <Ionicons
-                      name={item.checked ? 'checkbox' : 'square-outline'}
-                      size={24}
-                      color={item.checked ? '#60a5fa' : '#6b7280'}
-                    />
-                  </View>
-                  <View style={styles.itemContent}>
-                    <Text
-                      style={[
-                        styles.itemName,
-                        item.checked && styles.itemNameChecked,
-                      ]}
-                      numberOfLines={1}
+                    style={[
+                      styles.item,
+                      item.checked && styles.itemChecked,
+                      isActive && styles.itemActive,
+                    ]}
+                    onPress={() => handleToggle(item)}
+                    onLongPress={() => openEditModal(item)}
+                    activeOpacity={0.7}
+                  >
+                    <TouchableOpacity
+                      onLongPress={drag}
+                      delayLongPress={150}
+                      style={styles.dragHandle}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
-                      {item.name}
-                    </Text>
-                    {[
-                      item.quantity ? `${t('qtyLabel')} ${item.quantity}` : '',
-                      item.price != null && item.price > 0
-                        ? formatPrice(item.price * (item.quantity ?? 1))
-                        : '',
-                      item.addedByName ? `${t('by')} ${item.addedByName}` : '',
-                    ].filter(Boolean).length > 0 && (
-                      <Text style={styles.itemMeta}>
-                        {[
-                          item.quantity ? `${t('qtyLabel')} ${item.quantity}` : '',
-                          item.price != null && item.price > 0
-                            ? formatPrice(item.price * (item.quantity ?? 1))
-                            : '',
-                          item.addedByName ? `${t('by')} ${item.addedByName}` : '',
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
+                      <Ionicons
+                        name="reorder-three"
+                        size={24}
+                        color="#6b7280"
+                      />
+                    </TouchableOpacity>
+                    <View style={styles.checkbox}>
+                      <Ionicons
+                        name={item.checked ? 'checkbox' : 'square-outline'}
+                        size={24}
+                        color={item.checked ? '#60a5fa' : '#6b7280'}
+                      />
+                    </View>
+                    <View style={styles.itemContent}>
+                      <Text
+                        style={[
+                          styles.itemName,
+                          item.checked && styles.itemNameChecked,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {item.name}
                       </Text>
-                    )}
-                  </View>
+                      {[
+                        item.quantity ? `${t('qtyLabel')} ${item.quantity}` : '',
+                        item.price != null && item.price > 0
+                          ? formatPrice(item.price * (item.quantity ?? 1))
+                          : '',
+                        item.addedByName ? `${t('by')} ${item.addedByName}` : '',
+                      ].filter(Boolean).length > 0 && (
+                        <Text style={styles.itemMeta}>
+                          {[
+                            item.quantity ? `${t('qtyLabel')} ${item.quantity}` : '',
+                            item.price != null && item.price > 0
+                              ? formatPrice(item.price * (item.quantity ?? 1))
+                              : '',
+                            item.addedByName ? `${t('by')} ${item.addedByName}` : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </Text>
+                      )}
+                    </View>
                 </TouchableOpacity>
               </SwipeableRow>
             );
@@ -507,6 +548,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   itemChecked: { opacity: 0.7 },
+  itemActive: { opacity: 0.9 },
+  dragHandle: {
+    marginRight: 8,
+    padding: 4,
+  },
   checkbox: { marginRight: 12 },
   itemContent: { flex: 1 },
   itemName: { fontSize: 16, color: '#f9fafb' },

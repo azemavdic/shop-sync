@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import * as itemsService from './items.service.js';
-import { addItemSchema, updateItemSchema } from './items.schemas.js';
+import { addItemSchema, updateItemSchema, reorderItemsSchema } from './items.schemas.js';
 import * as socket from '../../socket/index.js';
 
 export const itemsController = {
@@ -62,6 +62,27 @@ export const itemsController = {
       );
       socket.emitItemEdited(groupId, item);
       return reply.send(item);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed';
+      return reply.status(403).send({ message: msg });
+    }
+  },
+
+  async reorder(req: FastifyRequest, reply: FastifyReply) {
+    const payload = await req.jwtVerify<{ userId: string }>();
+    const { groupId } = req.params as { groupId: string };
+    const parsed = reorderItemsSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ message: parsed.error.errors[0]?.message });
+    }
+    try {
+      const items = await itemsService.reorderItems(
+        payload.userId,
+        groupId,
+        parsed.data.itemIds
+      );
+      socket.emitItemsReordered(groupId, items, payload.userId);
+      return reply.send({ items });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed';
       return reply.status(403).send({ message: msg });

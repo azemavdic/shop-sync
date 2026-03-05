@@ -124,6 +124,7 @@ model Item {
   quantity  Int      @default(1)
   price     Decimal? @db.Decimal(10, 2) // price per unit, from article or user override
   checked   Boolean  @default(false)
+  position  Int      @default(0) // user-defined order for drag-and-drop
   addedById String
   groupId   String
   createdAt DateTime @default(now())
@@ -133,5 +134,5 @@ model Item {
   group  Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   @@index([groupId])
-  @@index([groupId, checked, createdAt]) // For efficient "checked at bottom" ordering
+  @@index([groupId, position]) // For efficient ordering
 }

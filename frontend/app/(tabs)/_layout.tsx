@@ -1,11 +1,14 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from '../../i18n';
-import { useSocketConnection } from '../../hooks/useSocket';
+import { useSocketConnection, useListSocket } from '../../hooks/useSocket';
+import { useGroupStore } from '../../stores/groupStore';
 
 export default function TabsLayout() {
   const { t } = useTranslation();
+  const currentGroup = useGroupStore((s) => s.currentGroup);
   useSocketConnection();
+  useListSocket(currentGroup?.id); // Stay in group room when group selected (any tab)
   return (
     <Tabs
       screenOptions={{

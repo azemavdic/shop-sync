@@ -25,10 +25,10 @@ export function useSocketConnection() {
   }, [isAuthenticated]);
 }
 
-/** Join group room and subscribe to item events when viewing a list */
+/** Join group room and subscribe to item events when a group is selected */
 export function useListSocket(groupId: string | undefined) {
-  const { addItem, updateItem, removeItem } = useListStore();
-  const prevGroupId = useRef<string | undefined>();
+  const { addItem, updateItem, removeItem, setItems } = useListStore();
+  const userId = useAuthStore((s) => s.user?.id);
 
   useEffect(() => {
     if (!groupId) return;
@@ -45,6 +45,7 @@ export function useListSocket(groupId: string | undefined) {
           quantity: item.quantity,
           price: item.price,
           checked: item.checked ?? false,
+          position: item.position,
           addedById: item.addedById,
           addedByName: item.addedByName,
           createdAt: item.createdAt,
@@ -57,6 +58,7 @@ export function useListSocket(groupId: string | undefined) {
           quantity: item.quantity,
           price: item.price,
           checked: item.checked,
+          position: item.position,
           updatedAt: item.updatedAt,
         });
       },
@@ -66,11 +68,33 @@ export function useListSocket(groupId: string | undefined) {
       onItemDeleted: (itemId) => {
         removeItem(itemId);
       },
+      onItemsReordered: (eventGroupId, items, initiatedByUserId) => {
+        if (eventGroupId !== groupId) return; // Not our group room
+        if (initiatedByUserId && userId && initiatedByUserId === userId) return; // We initiated it; skip to avoid flicker
+        const state = useListStore.getState();
+        const newIds = items.map((i: any) => i.id).join(',');
+        const currentIds = state.items.map((i) => i.id).join(',');
+        if (newIds === currentIds) return; // Same order, skip redundant update
+        setItems(
+          items.map((i: any) => ({
+            id: i.id,
+            name: i.name,
+            quantity: i.quantity,
+            price: i.price,
+            checked: i.checked ?? false,
+            position: i.position,
+            addedById: i.addedById,
+            addedByName: i.addedByName,
+            createdAt: i.createdAt,
+            updatedAt: i.updatedAt,
+          }))
+        );
+      },
     });
 
     return () => {
       leaveGroupRoom(groupId);
       unsubscribe();
     };
-  }, [groupId]);
+  }, [groupId, userId]);
 }

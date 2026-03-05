@@ -58,6 +58,14 @@ FACEBOOK_APP_SECRET=
 docker compose -f docker-compose.production.yml up -d
 ```
 
+**Prisma migrations:** The backend container runs `prisma migrate deploy` automatically on startup. This applies any pending migrations from `prisma/migrations/` to the production database. When you add new migrations (e.g. after schema changes), rebuild and redeploy:
+
+```bash
+docker compose -f docker-compose.production.yml up -d --build
+```
+
+New migrations will be applied before the server starts.
+
 ### 5. Verify
 
 ```bash
@@ -135,6 +143,7 @@ See [docs/BUILD.md](docs/BUILD.md) for development build commands.
 | Step | Command |
 |------|---------|
 | Deploy backend | `docker compose -f docker-compose.production.yml up -d` |
+| Deploy + apply new migrations | `docker compose -f docker-compose.production.yml up -d --build` |
 | View logs | `docker compose -f docker-compose.production.yml logs -f` |
 | Stop | `docker compose -f docker-compose.production.yml down` |
 | Build APK | `cd frontend && eas build --platform android --profile production` |
@@ -144,6 +153,8 @@ See [docs/BUILD.md](docs/BUILD.md) for development build commands.
 ## Troubleshooting
 
 **Backend won't start:** Check `docker compose logs backend`. Often a missing `POSTGRES_PASSWORD` or `JWT_SECRET`.
+
+**Prisma migration failed:** If the backend exits with a migration error, check `docker compose logs backend`. Ensure the database is reachable and `DATABASE_URL` is correct. Fix any schema conflicts, then redeploy with `--build`.
 
 **`Can't reach database server at shopsyncx:8` (or wrong host):** The `DATABASE_URL` is malformed. When using this compose file, the DB host must be `postgres` (the service name) and port `5432`. In Coolify:
 - Do **not** override `DATABASE_URL` in the UI if postgres is in the same compose file

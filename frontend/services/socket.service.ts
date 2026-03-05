@@ -64,6 +64,7 @@ export function subscribeToItemEvents(
     onItemEdited: (item: any) => void;
     onItemChecked: (itemId: string, checked: boolean) => void;
     onItemDeleted: (itemId: string) => void;
+    onItemsReordered?: (groupId: string, items: any[], initiatedByUserId?: string) => void;
   }
 ) {
   if (!socket) return () => {};
@@ -74,20 +75,25 @@ export function subscribeToItemEvents(
     callbacks.onItemChecked(payload.itemId, payload.checked);
   const onDeleted = (payload: { itemId: string }) =>
     callbacks.onItemDeleted(payload.itemId);
+  const onReordered = (payload: { groupId: string; items: any[]; initiatedByUserId?: string }) =>
+    callbacks.onItemsReordered?.(payload.groupId, payload.items, payload.initiatedByUserId);
 
   socket.on('item:added', onAdded);
   socket.on('item:edited', onEdited);
   socket.on('item:checked', onChecked);
   socket.on('item:deleted', onDeleted);
+  socket.on('items:reordered', onReordered);
 
   return () => {
     socket?.off('item:added', onAdded);
     socket?.off('item:edited', onEdited);
     socket?.off('item:checked', onChecked);
     socket?.off('item:deleted', onDeleted);
+    socket?.off('items:reordered', onReordered);
   };
 }
 
 export function getSocket(): Socket | null {
   return socket;
 }
+

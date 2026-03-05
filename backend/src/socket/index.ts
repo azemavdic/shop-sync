@@ -31,6 +31,10 @@ export function emitItemDeleted(groupId: string, itemId: string) {
   io?.to(`group:${groupId}`).emit('item:deleted', { itemId });
 }
 
+export function emitItemsReordered(groupId: string, items: object[], initiatedByUserId: string) {
+  io?.to(`group:${groupId}`).emit('items:reordered', { groupId, items, initiatedByUserId });
+}
+
 export function setupSocketHandlers(server: Server) {
   server.on('connection', (socket) => {
     socket.on('authenticate', async (payload: { token?: string }) => {

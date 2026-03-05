@@ -12,6 +12,7 @@ export interface ListItem {
   quantity?: number;
   price?: number | null;
   checked: boolean;
+  position?: number;
   addedById: string;
   addedByName?: string;
   createdAt: string;
@@ -73,4 +74,18 @@ export async function deleteItem(
   );
   const data = await res.json();
   if (!res.ok) throw new Error(data.message ?? 'Failed to delete item');
+}
+
+export async function reorderItems(
+  groupId: string,
+  itemIds: string[]
+): Promise<ListItem[]> {
+  const res = await fetch(`${config.apiUrl}/groups/${groupId}/items/reorder`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+    body: JSON.stringify({ itemIds }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to reorder items');
+  return data.items;
 }

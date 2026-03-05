@@ -11,3 +11,7 @@ export const updateItemSchema = z.object({
   price: z.number().min(0).optional().nullable(),
   checked: z.boolean().optional(),
 });
+
+export const reorderItemsSchema = z.object({
+  itemIds: z.array(z.string().min(1)).min(1, 'At least one item ID required'),
+});

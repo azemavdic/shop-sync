@@ -12,6 +12,7 @@ async function authGuard(request: any, reply: any) {
 export async function itemsRoutes(fastify: FastifyInstance) {
   fastify.get('/:groupId/items', { preHandler: [authGuard] }, itemsController.list);
   fastify.post('/:groupId/items', { preHandler: [authGuard] }, itemsController.add);
+  fastify.patch('/:groupId/items/reorder', { preHandler: [authGuard] }, itemsController.reorder);
   fastify.patch('/:groupId/items/:itemId', { preHandler: [authGuard] }, itemsController.update);
   fastify.delete('/:groupId/items/:itemId', { preHandler: [authGuard] }, itemsController.delete);
 }

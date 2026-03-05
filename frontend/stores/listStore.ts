@@ -6,6 +6,7 @@ export interface ListItem {
   quantity?: number;
   price?: number | null;
   checked: boolean;
+  position?: number;
   addedById: string;
   addedByName?: string;
   createdAt: string;
@@ -18,7 +19,8 @@ interface ListState {
   addItem: (item: ListItem) => void;
   updateItem: (id: string, updates: Partial<ListItem>) => void;
   removeItem: (id: string) => void;
-  getOrderedItems: () => ListItem[]; // creation order, no reorder on update
+  reorderItems: (itemIds: string[]) => void;
+  getOrderedItems: () => ListItem[];
 }
 
 export const useListStore = create<ListState>((set, get) => ({
@@ -40,12 +42,27 @@ export const useListStore = create<ListState>((set, get) => ({
     })),
   removeItem: (id) =>
     set((state) => ({ items: state.items.filter((i) => i.id !== id) })),
+  reorderItems: (itemIds) =>
+    set((state) => {
+      const byId = new Map(state.items.map((i) => [i.id, i]));
+      const reordered: ListItem[] = [];
+      for (let i = 0; i < itemIds.length; i++) {
+        const item = byId.get(itemIds[i]);
+        if (item) reordered.push({ ...item, position: i });
+      }
+      const orderedIds = new Set(itemIds);
+      const remaining = state.items.filter((i) => !orderedIds.has(i.id));
+      return { items: [...reordered, ...remaining].sort(byPosition) };
+    }),
   getOrderedItems: () => {
     const { items } = get();
-    return [...items].sort(byCreatedAt);
+    return [...items].sort(byPosition);
   },
 }));
 
-function byCreatedAt(a: ListItem, b: ListItem) {
+function byPosition(a: ListItem, b: ListItem) {
+  const posA = a.position ?? 0;
+  const posB = b.position ?? 0;
+  if (posA !== posB) return posA - posB;
   return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
 }
