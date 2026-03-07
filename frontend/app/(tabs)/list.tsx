@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
   },
   emptyText: { fontSize: 18, color: '#9ca3af', marginTop: 16 },
   emptySub: { fontSize: 14, color: '#6b7280', marginTop: 4 },
-  list: { padding: 16, paddingBottom: 32 },
+  list: { padding: 16, paddingBottom: 190 },
   item: {
     flexDirection: 'row',
     alignItems: 'center',
